@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  album-detail-api:
+    build: .
+    container_name: music_album_detail_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - DEBUG=false
+    env_file:
+      - .env
+    volumes:
+      - .:/app
