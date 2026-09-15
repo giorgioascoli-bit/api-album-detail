@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     # Discogs Configuration
     discogs_token: Optional[str] = None
-    discogs_user_agent: str = "AlbumDetailAPI/1.0.0"
+    discogs_user_agent: str = "MusicAlbumDetailAPI/1.0.0 (+https://github.com/giorgioascoli-bit/api-album-detail)"
 
     # AI Configuration (Gemini API)
     gemini_api_key: Optional[str] = None

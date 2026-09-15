@@ -16,6 +16,29 @@ class DiscogsService:
         }
         if settings.discogs_token:
             self.headers["Authorization"] = f"Discogs token={settings.discogs_token}"
+        self.last_error = None
+
+    def get_last_error(self) -> Optional[Dict[str, Any]]:
+        err = self.last_error
+        self.last_error = None
+        return err
+
+    def _handle_error_status(self, status_code: int, context: str):
+        if status_code == 429:
+            self.last_error = {
+                "status": 429,
+                "detail": "Rate limit di Discogs raggiunto (HTTP 429). Configura la variabile DISCOGS_TOKEN con un token personale gratuito per aumentare il limite."
+            }
+        elif status_code == 403:
+            self.last_error = {
+                "status": 403,
+                "detail": "Accesso bloccato da Discogs (HTTP 403). I server Discogs richiedono un token personale gratuito (DISCOGS_TOKEN) per le richieste provenienti dal cloud."
+            }
+        elif status_code == 401:
+            self.last_error = {
+                "status": 401,
+                "detail": "Token Discogs non valido o non autorizzato (HTTP 401)."
+            }
 
     async def get_release(self, release_id: int) -> Optional[Dict[str, Any]]:
         """Recupera i dettagli completi di una specifica release da Discogs."""
@@ -30,6 +53,7 @@ class DiscogsService:
                     return None
                 else:
                     logger.error("Errore Discogs release %s: HTTP %s - %s", release_id, response.status_code, response.text)
+                    self._handle_error_status(response.status_code, f"release {release_id}")
                     return None
             except Exception as e:
                 logger.error("Eccezione durante la chiamata Discogs release %s: %s", release_id, e)
@@ -48,6 +72,7 @@ class DiscogsService:
                     return None
                 else:
                     logger.error("Errore Discogs master %s: HTTP %s", master_id, response.status_code)
+                    self._handle_error_status(response.status_code, f"master {master_id}")
                     return None
             except Exception as e:
                 logger.error("Eccezione durante la chiamata Discogs master %s: %s", master_id, e)

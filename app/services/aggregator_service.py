@@ -46,22 +46,45 @@ class AggregatorService:
         if id_type.lower() == "master":
             master_id = discogs_id
             master_data = await discogs_service.get_master(master_id)
-            if not master_data:
-                raise HTTPException(status_code=404, detail=f"Master Discogs con ID {discogs_id} non trovato.")
-            main_release_id = master_data.get("main_release")
-            if main_release_id:
-                release_data = await discogs_service.get_release(main_release_id)
-            if not release_data:
-                # Fallback: crea struttura fittizia di release dal master
-                release_data = master_data
+            if master_data:
+                main_release_id = master_data.get("main_release")
+                if main_release_id:
+                    release_data = await discogs_service.get_release(main_release_id)
+                if not release_data:
+                    release_data = master_data
+            else:
+                # Fallback: prova a verificare se è invece un ID di release
+                release_data = await discogs_service.get_release(discogs_id)
+                if release_data:
+                    master_id = release_data.get("master_id")
+                    if master_id:
+                        master_data = await discogs_service.get_master(master_id)
         else:
             # Default è 'release'
             release_data = await discogs_service.get_release(discogs_id)
-            if not release_data:
-                raise HTTPException(status_code=404, detail=f"Release Discogs con ID {discogs_id} non trovata.")
-            master_id = release_data.get("master_id")
-            if master_id:
-                master_data = await discogs_service.get_master(master_id)
+            if release_data:
+                master_id = release_data.get("master_id")
+                if master_id:
+                    master_data = await discogs_service.get_master(master_id)
+            else:
+                # Fallback automatico: se non trovato come release, prova come master!
+                master_data = await discogs_service.get_master(discogs_id)
+                if master_data:
+                    master_id = discogs_id
+                    main_release_id = master_data.get("main_release")
+                    if main_release_id:
+                        release_data = await discogs_service.get_release(main_release_id)
+                    if not release_data:
+                        release_data = master_data
+
+        if not release_data and not master_data:
+            last_err = discogs_service.get_last_error()
+            if last_err:
+                raise HTTPException(status_code=last_err.get("status", 502), detail=last_err.get("detail"))
+            raise HTTPException(
+                status_code=404,
+                detail=f"Album con ID Discogs {discogs_id} non trovato (verificato sia come Release che come Master)."
+            )
 
         # 2. Informazioni di base dell'album
         album_title = release_data.get("title", "Sconosciuto")
