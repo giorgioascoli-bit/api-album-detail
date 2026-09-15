@@ -1,0 +1,71 @@
+name: Test and Deploy to Google Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  SERVICE_NAME: api-album-detail
+  REGION: europe-west1
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Pytest suite
+        run: pytest tests/ -v
+
+  deploy:
+    name: Deploy to Cloud Run
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Google Cloud Run
+        run: |
+          ENV_VARS="PORT=8080,CACHE_TTL_SECONDS=86400,DISCOGS_USER_AGENT=AlbumDetailAPI/1.0.0"
+          
+          if [ -n "${{ secrets.DISCOGS_TOKEN }}" ]; then
+            ENV_VARS="${ENV_VARS},DISCOGS_TOKEN=${{ secrets.DISCOGS_TOKEN }}"
+          fi
+          
+          if [ -n "${{ secrets.GEMINI_API_KEY }}" ]; then
+            ENV_VARS="${ENV_VARS},GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}"
+          fi
+
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --source . \
+            --project ${{ secrets.GCP_PROJECT_ID }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --set-env-vars "$ENV_VARS"

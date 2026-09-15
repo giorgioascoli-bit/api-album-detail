@@ -260,3 +260,37 @@ Per eseguire la suite di test automatizzati con `pytest`:
 # Con l'ambiente virtuale attivo:
 pytest tests/ -v
 ```
+
+---
+
+## ☁️ Deploy su Google Cloud Run (CI/CD con GitHub Actions)
+
+Il repository include una pipeline di **GitHub Actions** pronta all'uso ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)) che esegue automaticamente la suite di test e distribuisce l'applicazione su **Google Cloud Run** a ogni `push` sul ramo `main`.
+
+### 1. Configurazione Rapida del Service Account su Google Cloud
+
+Apri [Google Cloud Shell](https://shell.cloud.google.com/?show=terminal) nel tuo browser ed esegui:
+
+```bash
+# Scarica ed esegui lo script di configurazione automatica
+curl -sSL https://raw.githubusercontent.com/giorgioascoli-bit/api-album-detail/main/scripts/setup_gcp_sa.sh | bash
+```
+
+Lo script abiliterà le API necessarie (Cloud Run, Cloud Build, Artifact Registry), creerà il Service Account dedicato con i ruoli minimi indispensabili e genererà la chiave JSON.
+
+### 2. Aggiungi i Secret su GitHub
+
+Nel tuo repository GitHub, vai su **Settings** > **Secrets and variables** > **Actions** > **New repository secret** e inserisci:
+
+1. `GCP_PROJECT_ID`: l'ID del tuo progetto Google Cloud.
+2. `GCP_SA_KEY`: l'intero contenuto del file JSON generato dallo script al punto 1.
+3. *(Opzionale)* `DISCOGS_TOKEN`: il tuo token di Discogs.
+4. *(Opzionale)* `GEMINI_API_KEY`: la tua chiave Google Gemini.
+
+### 3. Deploy Automatico
+
+Ad ogni commit e push su `main`, GitHub Actions:
+1. Eseguirà l'intera suite di test con `pytest`.
+2. Se i test hanno successo, compilerà l'immagine Docker ed effettuerà il deploy su Google Cloud Run (regione `europe-west1`).
+3. L'API sarà immediatamente attiva, sicura in HTTPS e pronta per essere interrogata.
+
