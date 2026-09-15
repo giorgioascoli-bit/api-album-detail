@@ -23,7 +23,7 @@ class DiscogsService:
         self.last_error = None
         return err
 
-    def _handle_error_status(self, status_code: int, context: str):
+    def _handle_error_status(self, status_code: int, context: str, response_text: str = ""):
         if status_code == 429:
             self.last_error = {
                 "status": 429,
@@ -39,11 +39,16 @@ class DiscogsService:
                 "status": 401,
                 "detail": "Token Discogs non valido o non autorizzato (HTTP 401)."
             }
+        else:
+            self.last_error = {
+                "status": status_code,
+                "detail": f"Errore Discogs ({status_code}) per {context}: {response_text[:200]}"
+            }
 
     async def get_release(self, release_id: int) -> Optional[Dict[str, Any]]:
         """Recupera i dettagli completi di una specifica release da Discogs."""
         url = f"{DISCOGS_BASE_URL}/releases/{release_id}"
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=20.0) as client:
             try:
                 response = await client.get(url, headers=self.headers)
                 if response.status_code == 200:
@@ -53,16 +58,20 @@ class DiscogsService:
                     return None
                 else:
                     logger.error("Errore Discogs release %s: HTTP %s - %s", release_id, response.status_code, response.text)
-                    self._handle_error_status(response.status_code, f"release {release_id}")
+                    self._handle_error_status(response.status_code, f"release {release_id}", response.text)
                     return None
             except Exception as e:
                 logger.error("Eccezione durante la chiamata Discogs release %s: %s", release_id, e)
+                self.last_error = {
+                    "status": 502,
+                    "detail": f"Errore di rete verso Discogs ({type(e).__name__}): {str(e)}"
+                }
                 return None
 
     async def get_master(self, master_id: int) -> Optional[Dict[str, Any]]:
         """Recupera i dettagli di un master release da Discogs."""
         url = f"{DISCOGS_BASE_URL}/masters/{master_id}"
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=20.0) as client:
             try:
                 response = await client.get(url, headers=self.headers)
                 if response.status_code == 200:
@@ -72,10 +81,14 @@ class DiscogsService:
                     return None
                 else:
                     logger.error("Errore Discogs master %s: HTTP %s", master_id, response.status_code)
-                    self._handle_error_status(response.status_code, f"master {master_id}")
+                    self._handle_error_status(response.status_code, f"master {master_id}", response.text)
                     return None
             except Exception as e:
                 logger.error("Eccezione durante la chiamata Discogs master %s: %s", master_id, e)
+                self.last_error = {
+                    "status": 502,
+                    "detail": f"Errore di rete verso Discogs ({type(e).__name__}): {str(e)}"
+                }
                 return None
 
     async def get_master_versions(self, master_id: int, per_page: int = 25) -> List[Dict[str, Any]]:

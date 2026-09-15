@@ -138,8 +138,8 @@
               id="discogsIdInput" 
               required 
               min="1" 
-              value="249504" 
-              placeholder="Es. 249504" 
+              value="10362" 
+              placeholder="Es. 10362" 
               class="w-full glass-input rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition font-mono text-lg font-bold"
             />
           </div>
@@ -150,8 +150,8 @@
               Tipo ID
             </label>
             <select id="idTypeSelect" class="w-full glass-input rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none transition bg-[#0e1320]">
-              <option value="release">Release (default)</option>
-              <option value="master">Master</option>
+              <option value="master" selected>Master (Album)</option>
+              <option value="release">Release (Singola Stampa)</option>
             </select>
           </div>
 
@@ -196,19 +196,19 @@
           ⚡ Prova rapida con album storici:
         </p>
         <div class="flex flex-wrap gap-2">
-          <button onclick="applyPreset(249504, 'release')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
+          <button onclick="applyPreset(10362, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
             🌙 Pink Floyd - The Dark Side of the Moon
           </button>
-          <button onclick="applyPreset(8514, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
+          <button onclick="applyPreset(8515, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
             🎺 Miles Davis - Kind of Blue
           </button>
-          <button onclick="applyPreset(5863, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
+          <button onclick="applyPreset(5871, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
             👑 Queen - A Night at the Opera
           </button>
           <button onclick="applyPreset(8883, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
             🕺 Michael Jackson - Thriller
           </button>
-          <button onclick="applyPreset(21491, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
+          <button onclick="applyPreset(21501, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
             📻 Radiohead - OK Computer
           </button>
         </div>
