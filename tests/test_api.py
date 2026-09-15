@@ -23,6 +23,12 @@ def test_root_endpoint():
     data = response.json()
     assert "name" in data
     assert data["docs_url"] == "/docs"
+    assert data["demo_url"] == "/demo"
+
+def test_demo_endpoint():
+    response = client.get("/demo")
+    assert response.status_code == 200
+    assert "Music Album Explorer" in response.text
 
 def test_health_endpoint():
     response = client.get("/api/v1/health")

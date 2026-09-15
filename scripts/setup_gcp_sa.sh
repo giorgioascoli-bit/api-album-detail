@@ -9,12 +9,20 @@ set -e
 
 echo "🚀 Avvio configurazione Service Account per GitHub Actions..."
 
-# 1. Recupera o verifica il Project ID corrente
-PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
+# 1. Recupera o verifica il Project ID corrente (da argomento, config o input utente)
+PROJECT_ID="${1:-$(gcloud config get-value project 2>/dev/null)}"
 
 if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "(unset)" ]; then
   echo "⚠️ Nessun progetto selezionato. Inserisci il tuo Project ID di Google Cloud:"
-  read -r PROJECT_ID
+  if [ -t 0 ]; then
+    read -r PROJECT_ID
+  elif [ -e /dev/tty ]; then
+    read -r PROJECT_ID < /dev/tty
+  fi
+  if [ -z "$PROJECT_ID" ]; then
+    echo "❌ Errore: Project ID non fornito."
+    exit 1
+  fi
   gcloud config set project "$PROJECT_ID"
 fi
 

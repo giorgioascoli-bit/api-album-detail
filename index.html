@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music Album Explorer 🎵 | Powered by Google Cloud Run</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669'
+            },
+            accent: {
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed'
+            }
+          },
+          animation: {
+            'spin-slow': 'spin 12s linear infinite',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glass-card {
+      background: rgba(18, 24, 38, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-input {
+      background: rgba(10, 14, 23, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .glass-input:focus {
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen font-sans selection:bg-brand-500 selection:text-white">
+
+  <!-- Background decorative glow -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative z-10 max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    
+    <!-- Top Header -->
+    <header class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-8 border-b border-slate-800/80 mb-8">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 via-emerald-500 to-cyan-400 p-0.5 shadow-lg shadow-brand-500/20">
+          <div class="w-full h-full bg-[#0b0f19] rounded-[14px] flex items-center justify-center">
+            <span class="text-2xl">🎵</span>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+            Music Album Explorer
+          </h1>
+          <p class="text-xs text-slate-400">Powered by Google Cloud Run & Discogs API</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span id="apiStatusBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
+          <span class="w-2 h-2 rounded-full bg-slate-500 animate-pulse"></span>
+          Verifica connessione...
+        </span>
+      </div>
+    </header>
+
+    <!-- Configuration & Search Controls -->
+    <section class="glass-card rounded-3xl p-6 sm:p-8 mb-8 shadow-2xl">
+      
+      <!-- API Server URL Setting -->
+      <div class="mb-6 pb-6 border-b border-slate-800/60">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+          🌐 Endpoint API (Google Cloud Run o Locale)
+        </label>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <div class="relative flex-1">
+            <input 
+              type="text" 
+              id="apiUrlInput" 
+              placeholder="https://api-album-detail-xxxxxx.europe-west1.run.app" 
+              class="w-full glass-input rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none transition font-mono"
+            />
+          </div>
+          <button 
+            id="testConnectionBtn" 
+            onclick="testApiConnection()" 
+            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-semibold text-slate-200 border border-slate-700 transition"
+          >
+            Test Connessione
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Form -->
+      <form id="searchForm" onsubmit="handleSearch(event)" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-4">
+          
+          <!-- Discogs ID -->
+          <div class="sm:col-span-6">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Discogs ID dell'Album
+            </label>
+            <input 
+              type="number" 
+              id="discogsIdInput" 
+              required 
+              min="1" 
+              value="249504" 
+              placeholder="Es. 249504" 
+              class="w-full glass-input rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none transition font-mono text-lg font-bold"
+            />
+          </div>
+
+          <!-- ID Type -->
+          <div class="sm:col-span-3">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Tipo ID
+            </label>
+            <select id="idTypeSelect" class="w-full glass-input rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none transition bg-[#0e1320]">
+              <option value="release">Release (default)</option>
+              <option value="master">Master</option>
+            </select>
+          </div>
+
+          <!-- Language -->
+          <div class="sm:col-span-3">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Lingua (Bio & Recensioni)
+            </label>
+            <select id="langSelect" class="w-full glass-input rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none transition bg-[#0e1320]">
+              <option value="it">🇮🇹 Italiano</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="es">🇪🇸 Español</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="de">🇩🇪 Deutsch</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Options & Submit Row -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" id="synthesizeCheck" checked class="w-4 h-4 rounded text-brand-500 focus:ring-brand-500 bg-slate-900 border-slate-700">
+            <span class="text-xs text-slate-300">Arricchimento AI (Gemini) se disponibile</span>
+          </label>
+
+          <button 
+            type="submit" 
+            id="searchBtn"
+            class="w-full sm:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-brand-500 to-emerald-600 hover:from-brand-400 hover:to-emerald-500 text-slate-950 font-bold text-sm shadow-lg shadow-brand-500/25 active:scale-95 transition flex items-center justify-center gap-2"
+          >
+            <span>Esplora Album</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+          </button>
+        </div>
+      </form>
+
+      <!-- Quick Preset Albums -->
+      <div class="mt-6 pt-4 border-t border-slate-800/40">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5">
+          ⚡ Prova rapida con album storici:
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="applyPreset(249504, 'release')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
+            🌙 Pink Floyd - The Dark Side of the Moon
+          </button>
+          <button onclick="applyPreset(525624, 'release')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
+            👑 Queen - A Night at the Opera
+          </button>
+          <button onclick="applyPreset(430030, 'release')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
+            🎺 Miles Davis - Kind of Blue
+          </button>
+          <button onclick="applyPreset(2911293, 'release')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
+            🕺 Michael Jackson - Thriller
+          </button>
+          <button onclick="applyPreset(49378, 'release')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
+            📻 Radiohead - OK Computer
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="hidden py-16 text-center">
+      <div class="inline-flex flex-col items-center justify-center">
+        <div class="relative w-20 h-20 mb-4">
+          <!-- Animated Vinyl Record -->
+          <div class="w-20 h-20 rounded-full bg-slate-900 border-4 border-slate-700 shadow-xl flex items-center justify-center animate-spin-slow">
+            <div class="w-8 h-8 rounded-full bg-brand-500/20 border-2 border-brand-400 flex items-center justify-center">
+              <div class="w-2.5 h-2.5 rounded-full bg-slate-900"></div>
+            </div>
+          </div>
+        </div>
+        <h3 class="text-lg font-semibold text-slate-200">Interrogazione API Google Cloud in corso...</h3>
+        <p class="text-xs text-slate-400 mt-1 max-w-sm">
+          Recupero dati da Discogs, sintesi biografia Wikipedia ed estrazione edizioni/recensioni.
+        </p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="hidden glass-card rounded-3xl p-6 sm:p-8 mb-8 border-red-500/30 bg-red-950/20">
+      <div class="flex items-start gap-4">
+        <div class="p-3 bg-red-500/10 text-red-400 rounded-2xl text-xl">⚠️</div>
+        <div class="flex-1">
+          <h3 class="text-lg font-semibold text-red-200">Errore durante la chiamata</h3>
+          <p id="errorMessage" class="text-sm text-red-300/80 mt-1 font-mono"></p>
+          <p class="text-xs text-slate-400 mt-3">
+            Suggerimento: controlla che l'URL dell'API sia raggiungibile e che l'ID Discogs inserito sia valido.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="hidden space-y-8">
+
+      <!-- Hero Card (Album & Artist Info) -->
+      <div class="glass-card rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+        <div class="flex flex-col md:flex-row items-center md:items-start gap-8">
+          
+          <!-- Vinyl Visual Artwork -->
+          <div class="relative group">
+            <div class="w-44 h-44 sm:w-52 sm:h-52 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-950 border border-slate-700/80 flex items-center justify-center shadow-2xl overflow-hidden relative">
+              <div class="absolute inset-0 bg-radial from-transparent to-black/60"></div>
+              <div class="w-32 h-32 rounded-full border-4 border-slate-700/50 flex items-center justify-center animate-spin-slow">
+                <div class="w-12 h-12 rounded-full bg-brand-500/30 border border-brand-400 flex items-center justify-center">
+                  <span class="text-2xl">💿</span>
+                </div>
+              </div>
+            </div>
+            <div id="aiBadge" class="hidden absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1 rounded-full text-[11px] font-bold bg-gradient-to-r from-accent-500 to-brand-500 text-white shadow-lg">
+              ✨ AI Enriched
+            </div>
+          </div>
+
+          <!-- Album Meta -->
+          <div class="flex-1 text-center md:text-left space-y-3">
+            <div class="flex flex-wrap items-center justify-center md:justify-start gap-2">
+              <span id="albumYear" class="px-2.5 py-0.5 rounded-md bg-slate-800 text-xs font-semibold text-slate-300 border border-slate-700">1973</span>
+              <span id="discogsIdBadge" class="px-2.5 py-0.5 rounded-md bg-slate-800 text-xs font-mono text-slate-400 border border-slate-700">Discogs #249504</span>
+            </div>
+
+            <h2 id="albumTitle" class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">The Dark Side of the Moon</h2>
+            <p id="artistName" class="text-xl font-medium text-brand-400">Pink Floyd</p>
+
+            <!-- Genres & Styles -->
+            <div id="genresContainer" class="flex flex-wrap items-center justify-center md:justify-start gap-1.5 pt-1">
+              <!-- Injected by JS -->
+            </div>
+
+            <!-- Community Score -->
+            <div class="pt-2 flex items-center justify-center md:justify-start gap-3 text-sm">
+              <div class="flex items-center text-amber-400">
+                <span class="text-lg mr-1.5">★</span>
+                <span id="communityScore" class="font-bold text-white text-base">4.88</span>
+                <span class="text-slate-400 text-xs ml-1">/ 5.0</span>
+              </div>
+              <span class="text-slate-600">•</span>
+              <span id="communityVotes" class="text-xs text-slate-400">15,420 voti su Discogs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Two-Column Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left Column: Biography & Reviews -->
+        <div class="lg:col-span-7 space-y-8">
+          
+          <!-- Artist Biography Card -->
+          <div class="glass-card rounded-3xl p-6 sm:p-8">
+            <div class="flex items-center justify-between gap-4 mb-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <span>📖</span> Biografia dell'Artista
+              </h3>
+              <span id="bioSource" class="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                Wikipedia
+              </span>
+            </div>
+            <p id="artistBio" class="text-sm text-slate-300 leading-relaxed whitespace-pre-line"></p>
+          </div>
+
+          <!-- Reviews & Reception Card -->
+          <div class="glass-card rounded-3xl p-6 sm:p-8">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2 mb-4">
+              <span>✍️</span> Accoglienza Critica & Note
+            </h3>
+            <p id="reviewsSummary" class="text-sm text-slate-300 leading-relaxed mb-4"></p>
+            
+            <div id="criticalPointsWrapper" class="hidden mt-4 pt-4 border-t border-slate-800/80">
+              <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Punti Salienti dalla Critica:</h4>
+              <ul id="criticalPointsList" class="space-y-2 text-xs text-slate-300">
+                <!-- Injected by JS -->
+              </ul>
+            </div>
+
+            <div id="discogsNotesWrapper" class="hidden mt-4 pt-4 border-t border-slate-800/80">
+              <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Note Discogs:</h4>
+              <p id="discogsNotes" class="text-xs text-slate-400 italic"></p>
+            </div>
+          </div>
+
+          <!-- Tracklist -->
+          <div class="glass-card rounded-3xl p-6 sm:p-8">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <span>🎶</span> Tracklist Ufficiale
+              </h3>
+              <span id="trackCount" class="text-xs text-slate-400">10 tracce</span>
+            </div>
+
+            <div class="overflow-hidden rounded-2xl border border-slate-800">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th class="py-2.5 px-4 w-12 text-center">#</th>
+                    <th class="py-2.5 px-4">Titolo</th>
+                    <th class="py-2.5 px-4 text-right w-20">Durata</th>
+                  </tr>
+                </thead>
+                <tbody id="tracklistTableBody" class="divide-y divide-slate-800/60 bg-slate-900/30 font-medium text-slate-200">
+                  <!-- Injected by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Musicians & Editions -->
+        <div class="lg:col-span-5 space-y-8">
+          
+          <!-- Musicians & Roles Card -->
+          <div class="glass-card rounded-3xl p-6 sm:p-8">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <span>🎸</span> Musicisti & Crediti
+              </h3>
+              <span id="musicianCount" class="text-xs text-slate-400"></span>
+            </div>
+
+            <div id="musiciansList" class="space-y-3 custom-scroll max-h-[480px] overflow-y-auto pr-1">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+
+          <!-- Main Editions Card -->
+          <div class="glass-card rounded-3xl p-6 sm:p-8">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <span>📦</span> Principali Edizioni Storiche
+              </h3>
+              <span id="editionsCount" class="text-xs text-slate-400"></span>
+            </div>
+
+            <div id="editionsList" class="space-y-3 custom-scroll max-h-[360px] overflow-y-auto pr-1">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+
+          <!-- Raw JSON Accordion -->
+          <div class="glass-card rounded-3xl p-6">
+            <button onclick="toggleRawJson()" class="w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-200 transition">
+              <span>🔍 Ispezione Payload JSON Grezzo</span>
+              <span id="jsonToggleIcon">▼</span>
+            </button>
+            <div id="rawJsonWrapper" class="hidden mt-4">
+              <pre id="rawJsonContent" class="text-[11px] font-mono text-emerald-400 bg-slate-950 p-4 rounded-xl overflow-x-auto max-h-96 custom-scroll"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    // Inizializza URL API: se servito dal backend usa l'host corrente, altrimenti default
+    const defaultCloudRunUrl = "https://api-album-detail-142838642223.europe-west1.run.app";
+    const currentOrigin = window.location.origin.includes("http") ? window.location.origin : "";
+    
+    // Configura valore iniziale input
+    const storedUrl = localStorage.getItem("album_api_url");
+    const apiUrlInput = document.getElementById("apiUrlInput");
+    apiUrlInput.value = storedUrl || (currentOrigin.startsWith("http") && !currentOrigin.includes("file:") ? currentOrigin : defaultCloudRunUrl);
+
+    // Salva URL modificato
+    apiUrlInput.addEventListener("change", () => {
+      localStorage.setItem("album_api_url", apiUrlInput.value.trim());
+      testApiConnection();
+    });
+
+    async function testApiConnection() {
+      const baseUrl = apiUrlInput.value.trim().replace(/\/$/, "");
+      const badge = document.getElementById("apiStatusBadge");
+      badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> Test in corso...`;
+      badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-950/60 text-amber-300 border border-amber-800";
+
+      try {
+        const res = await fetch(`${baseUrl}/api/v1/health`, { method: "GET" });
+        if (res.ok) {
+          const data = await res.json();
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> API Online (Healthy)`;
+          badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-800";
+        } else {
+          throw new Error(`HTTP ${res.status}`);
+        }
+      } catch (err) {
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-400"></span> API Non Raggiungibile`;
+        badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-red-950/60 text-red-300 border border-red-800";
+      }
+    }
+
+    function applyPreset(id, type) {
+      document.getElementById("discogsIdInput").value = id;
+      document.getElementById("idTypeSelect").value = type;
+      handleSearch(new Event("submit"));
+    }
+
+    async function handleSearch(e) {
+      if (e) e.preventDefault();
+
+      const baseUrl = apiUrlInput.value.trim().replace(/\/$/, "");
+      const discogsId = document.getElementById("discogsIdInput").value.trim();
+      const idType = document.getElementById("idTypeSelect").value;
+      const lang = document.getElementById("langSelect").value;
+      const synthesize = document.getElementById("synthesizeCheck").checked;
+
+      if (!discogsId) return;
+
+      // UI States
+      document.getElementById("resultsSection").classList.add("hidden");
+      document.getElementById("errorState").classList.add("hidden");
+      document.getElementById("loadingState").classList.remove("hidden");
+      document.getElementById("searchBtn").disabled = true;
+
+      const endpoint = `${baseUrl}/api/v1/album/${discogsId}?id_type=${idType}&lang=${lang}&synthesize=${synthesize}`;
+
+      try {
+        const response = await fetch(endpoint);
+        if (!response.ok) {
+          let errDetail = `Status ${response.status}: ${response.statusText}`;
+          try {
+            const errJson = await response.json();
+            if (errJson.detail) errDetail = errJson.detail;
+          } catch (_) {}
+          throw new Error(errDetail);
+        }
+
+        const data = await response.json();
+        renderAlbumDetails(data);
+      } catch (err) {
+        document.getElementById("errorMessage").textContent = err.message;
+        document.getElementById("errorState").classList.remove("hidden");
+      } finally {
+        document.getElementById("loadingState").classList.add("hidden");
+        document.getElementById("searchBtn").disabled = false;
+      }
+    }
+
+    function renderAlbumDetails(album) {
+      // Header Meta
+      document.getElementById("albumTitle").textContent = album.title || "Titolo Sconosciuto";
+      document.getElementById("artistName").textContent = album.primary_artist?.name || "Artista Sconosciuto";
+      document.getElementById("albumYear").textContent = album.year || "Anno N/D";
+      document.getElementById("discogsIdBadge").textContent = `Discogs #${album.discogs_id}`;
+
+      // AI Badge
+      const aiBadge = document.getElementById("aiBadge");
+      if (album.ai_enriched) {
+        aiBadge.classList.remove("hidden");
+      } else {
+        aiBadge.classList.add("hidden");
+      }
+
+      // Genres & Styles
+      const genresContainer = document.getElementById("genresContainer");
+      genresContainer.innerHTML = "";
+      const tags = [...(album.genres || []), ...(album.styles || [])];
+      tags.forEach(tag => {
+        const pill = document.createElement("span");
+        pill.className = "px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800/80 text-slate-300 border border-slate-700/60";
+        pill.textContent = tag;
+        genresContainer.appendChild(pill);
+      });
+
+      // Community Rating
+      const community = album.reviews_and_comments || {};
+      document.getElementById("communityScore").textContent = community.community_score ? community.community_score.toFixed(2) : "N/D";
+      document.getElementById("communityVotes").textContent = community.community_votes ? `${community.community_votes.toLocaleString()} voti Discogs` : "Nessuna recensione";
+
+      // Biography
+      const artist = album.primary_artist || {};
+      document.getElementById("artistBio").textContent = artist.biography || "Nessuna biografia disponibile.";
+      document.getElementById("bioSource").textContent = artist.source === "wikipedia_it" ? "Wikipedia (IT)" : (artist.source || "Discogs");
+
+      // Reviews
+      document.getElementById("reviewsSummary").textContent = community.summary || "Nessuna recensione disponibile.";
+      
+      const criticalPointsWrapper = document.getElementById("criticalPointsWrapper");
+      const criticalList = document.getElementById("criticalPointsList");
+      criticalList.innerHTML = "";
+      if (community.critical_reception && community.critical_reception.length > 0) {
+        criticalPointsWrapper.classList.remove("hidden");
+        community.critical_reception.forEach(item => {
+          const li = document.createElement("li");
+          li.className = "flex items-start gap-2";
+          li.innerHTML = `<span class="text-brand-400 font-bold">•</span><span>${item}</span>`;
+          criticalList.appendChild(li);
+        });
+      } else {
+        criticalPointsWrapper.classList.add("hidden");
+      }
+
+      // Discogs Notes
+      const discogsNotesWrapper = document.getElementById("discogsNotesWrapper");
+      if (community.discogs_notes) {
+        discogsNotesWrapper.classList.remove("hidden");
+        document.getElementById("discogsNotes").textContent = `"${community.discogs_notes}"`;
+      } else {
+        discogsNotesWrapper.classList.add("hidden");
+      }
+
+      // Tracklist
+      const tableBody = document.getElementById("tracklistTableBody");
+      tableBody.innerHTML = "";
+      const tracks = album.tracklist || [];
+      document.getElementById("trackCount").textContent = `${tracks.length} tracce`;
+
+      tracks.forEach(track => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="py-2.5 px-4 text-center text-xs font-mono text-slate-400">${track.position || "-"}</td>
+          <td class="py-2.5 px-4 font-semibold text-slate-100">${track.title || "Senza Titolo"}</td>
+          <td class="py-2.5 px-4 text-right text-xs font-mono text-slate-400">${track.duration || "--:--"}</td>
+        `;
+        tableBody.appendChild(tr);
+      });
+
+      // Musicians
+      const musiciansList = document.getElementById("musiciansList");
+      musiciansList.innerHTML = "";
+      const musicians = album.musicians || [];
+      document.getElementById("musicianCount").textContent = `${musicians.length} accreditati`;
+
+      if (musicians.length === 0) {
+        musiciansList.innerHTML = `<p class="text-xs text-slate-500 italic">Nessun musicista o credito specifico trovato.</p>`;
+      } else {
+        musicians.forEach(m => {
+          const card = document.createElement("div");
+          card.className = "p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 transition";
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <span class="font-bold text-sm text-slate-200">${m.name}</span>
+            </div>
+            <p class="text-xs text-brand-400 font-medium mt-0.5">${m.role || "Esecutore"}</p>
+            ${m.tracks ? `<p class="text-[11px] text-slate-500 mt-1">Brani: ${m.tracks}</p>` : ''}
+          `;
+          musiciansList.appendChild(card);
+        });
+      }
+
+      // Editions
+      const editionsList = document.getElementById("editionsList");
+      editionsList.innerHTML = "";
+      const editions = album.main_editions || [];
+      document.getElementById("editionsCount").textContent = `${editions.length} edizioni note`;
+
+      if (editions.length === 0) {
+        editionsList.innerHTML = `<p class="text-xs text-slate-500 italic">Nessuna informazione sulle edizioni.</p>`;
+      } else {
+        editions.forEach(ed => {
+          const edCard = document.createElement("div");
+          edCard.className = "p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-xs";
+          edCard.innerHTML = `
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="font-bold text-slate-200">${ed.format || "Formato N/D"}</span>
+              <span class="font-mono text-slate-400">${ed.year || "Anno N/D"}</span>
+            </div>
+            <p class="text-slate-400">${ed.country ? `Paese: ${ed.country}` : ''} ${ed.label ? `• Etichetta: ${ed.label}` : ''}</p>
+            ${ed.notable_notes ? `<span class="inline-block mt-1.5 px-2 py-0.5 rounded bg-brand-500/10 text-brand-300 text-[10px] font-medium border border-brand-500/20">${ed.notable_notes}</span>` : ''}
+          `;
+          editionsList.appendChild(edCard);
+        });
+      }
+
+      // Raw JSON
+      document.getElementById("rawJsonContent").textContent = JSON.stringify(album, null, 2);
+
+      // Reveal Results
+      document.getElementById("resultsSection").classList.remove("hidden");
+    }
+
+    function toggleRawJson() {
+      const wrapper = document.getElementById("rawJsonWrapper");
+      const icon = document.getElementById("jsonToggleIcon");
+      if (wrapper.classList.contains("hidden")) {
+        wrapper.classList.remove("hidden");
+        icon.textContent = "▲";
+      } else {
+        wrapper.classList.add("hidden");
+        icon.textContent = "▼";
+      }
+    }
+
+    // Esegui test di connessione iniziale
+    testApiConnection();
+  </script>
+</body>
+</html>

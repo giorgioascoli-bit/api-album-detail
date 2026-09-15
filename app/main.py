@@ -1,7 +1,8 @@
+import os
 import logging
 from fastapi import FastAPI, Query, Path, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from app.config import settings
 from app.models.album import AlbumDetailResponse
@@ -40,6 +41,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/demo", response_class=HTMLResponse, tags=["Demo UI"])
+async def demo_ui():
+    """Interfaccia web interattiva per esplorare e testare l'API."""
+    html_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "index.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>Interfaccia non trovata</h1>", status_code=404)
+
 @app.get("/", tags=["Info"])
 async def root():
     return {
@@ -47,6 +57,7 @@ async def root():
         "version": "1.0.0",
         "description": "API per estrarre biografia, musicisti, edizioni e commenti di un album da Discogs ID",
         "docs_url": "/docs",
+        "demo_url": "/demo",
         "ai_enabled": ai_enricher.is_available()
     }
 
