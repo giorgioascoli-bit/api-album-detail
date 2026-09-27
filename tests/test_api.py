@@ -24,17 +24,22 @@ def test_root_endpoint():
     assert "name" in data
     assert data["docs_url"] == "/docs"
     assert data["demo_url"] == "/demo"
+    assert "version" in data
+    assert "build" in data
 
 def test_demo_endpoint():
     response = client.get("/demo")
     assert response.status_code == 200
     assert "Music Album Explorer" in response.text
+    assert "v1.2.0-dev" in response.text
 
 def test_health_endpoint():
     response = client.get("/api/v1/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
+    assert "version" in data
+    assert "build" in data
     assert "discogs_token_configured" in data
     assert "ai_enricher_configured" in data
 

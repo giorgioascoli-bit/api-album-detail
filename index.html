@@ -82,10 +82,15 @@
           </div>
         </div>
         <div>
-          <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-            Music Album Explorer
-          </h1>
-          <p class="text-xs text-slate-400">Powered by Google Cloud Run & Discogs API</p>
+          <div class="flex items-center gap-2.5">
+            <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+              Music Album Explorer
+            </h1>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              v1.2.0-dev
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Powered by Google Cloud Run & Discogs API • <span class="font-mono text-slate-400">Build 2026.09.27.02</span></p>
         </div>
       </div>
 
@@ -557,7 +562,22 @@
           </div>
         </div>
       </div>
-    </div>
+    <!-- Development Version & Build Status Footer -->
+    <footer class="mt-16 pt-6 pb-8 border-t border-slate-800/80 text-center text-xs text-slate-500">
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <span class="inline-flex items-center gap-1.5 font-medium text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Google Cloud Run
+        </span>
+        <span class="text-slate-700">•</span>
+        <span>Versione Sviluppo: <strong class="font-mono text-amber-300 font-bold">v1.2.0-dev</strong></span>
+        <span class="text-slate-700">•</span>
+        <span>Build ID: <strong class="font-mono text-slate-300">2026.09.27.02</strong></span>
+        <span class="text-slate-700">•</span>
+        <a href="/docs" target="_blank" class="text-brand-400 hover:text-brand-300 transition underline">Swagger Docs</a>
+        <span class="text-slate-700">•</span>
+        <a href="/api/v1/health" target="_blank" class="text-brand-400 hover:text-brand-300 transition underline">Health JSON</a>
+      </div>
+    </footer>
   </div>
 
   <!-- JavaScript Logic -->
@@ -587,7 +607,8 @@
         const res = await fetch(`${baseUrl}/api/v1/health`, { method: "GET" });
         if (res.ok) {
           const data = await res.json();
-          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> API Online (Healthy)`;
+          const verStr = data.version ? ` [API ${data.version}]` : "";
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> API Online${verStr} (Healthy)`;
           badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-800";
         } else {
           throw new Error(`HTTP ${res.status}`);

@@ -16,6 +16,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("album_detail_api")
 
+APP_VERSION = "1.2.0-dev"
+BUILD_ID = "2026.09.27.02"
+
 app = FastAPI(
     title="Music Album Detail API",
     description="""
@@ -24,11 +27,14 @@ API REST per estrarre informazioni dettagliate e arricchite su un album musicale
 Caratteristiche:
 - **Biografia dell'artista/musicista principale** (estratta da Wikipedia e Discogs).
 - **Lista dei musicisti partecipanti** con strumenti, ruoli e tracce accreditate.
-- **Principali edizioni dell'album** (vinili storici, CD, ristampe rimasterizzate, edizioni Deluxe).
-- **Commenti e recensioni** della critica e valutazione della community Discogs.
-- **Modulo AI Opzionale** (Google Gemini) per sintesi armonica e traduzione multilingua.
+- **Dettagli tecnici e produzione** (luogo di registrazione, date, ingegneri audio).
+- **Copertina, packaging fisico e crediti dedicati** (fotografo, illustratore, designer).
+- **Quotazioni di mercato Discogs** (prezzo minimo, stima max e copie in vendita).
+- **Curiosità e aneddoti** storici sulla registrazione dell'album.
+- **Traduzione bilingue delle note d'archivio Discogs** (italiano e inglese).
+- **Modulo AI Opzionale** (Google Gemini) per sintesi monografica ed enciclopedica.
     """,
-    version="1.0.0",
+    version=APP_VERSION,
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -55,8 +61,10 @@ async def demo_ui():
 async def root():
     return {
         "name": "Music Album Detail API",
-        "version": "1.0.0",
-        "description": "API per estrarre biografia, musicisti, edizioni e commenti di un album da Discogs ID",
+        "version": APP_VERSION,
+        "build": BUILD_ID,
+        "environment": "development",
+        "description": "API per estrarre biografia, musicisti, edizioni, copertina e commenti di un album da Discogs ID",
         "docs_url": "/docs",
         "demo_url": "/demo",
         "ai_enabled": ai_enricher.is_available()
@@ -66,6 +74,8 @@ async def root():
 async def health_check():
     return {
         "status": "healthy",
+        "version": APP_VERSION,
+        "build": BUILD_ID,
         "discogs_token_configured": bool(settings.discogs_token),
         "ai_enricher_configured": ai_enricher.is_available()
     }
