@@ -27,7 +27,9 @@ class ProductionDetails(BaseModel):
     producers: List[str] = Field(default_factory=list, description="Produttori dell'album")
 
 class CoverArtDetails(BaseModel):
-    designer: Optional[str] = Field(None, description="Autore, grafico o fotografo della copertina (es. Hipgnosis, Storm Thorgerson)")
+    designer: Optional[str] = Field(None, description="Graphic designer, studio creativo o art direction (es. Hipgnosis, Storm Thorgerson)")
+    photographer: Optional[str] = Field(None, description="Fotografo della copertina o dei ritratti interni (es. Aubrey Powell, Don Hunstein)")
+    illustrator: Optional[str] = Field(None, description="Illustratore, pittore o artista visivo (es. George Hardie, Mati Klarwein)")
     description: Optional[str] = Field(None, description="Descrizione iconografica dell'artwork, copertina anteriore, posteriore e gatefold")
     packaging_contents: List[str] = Field(default_factory=list, description="Elementi fisici inclusi nella confezione (es. Copertina Gatefold, Poster, Adesivi, Libretto)")
 

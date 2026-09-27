@@ -2,7 +2,8 @@ import os
 import logging
 from fastapi import FastAPI, Query, Path, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, Response
+import httpx
 
 from app.config import settings
 from app.models.album import AlbumDetailResponse
@@ -68,6 +69,28 @@ async def health_check():
         "discogs_token_configured": bool(settings.discogs_token),
         "ai_enricher_configured": ai_enricher.is_available()
     }
+
+@app.get("/api/v1/album/image-proxy", tags=["Album"])
+async def proxy_image(url: str = Query(..., description="URL dell'immagine di copertina")):
+    """Proxy per servire immagini di copertina aggirando blocchi di terze parti o referrer policy dei browser."""
+    if not url.startswith("https://") and not url.startswith("http://"):
+        raise HTTPException(status_code=400, detail="URL non valido")
+    try:
+        headers = {
+            "User-Agent": settings.discogs_user_agent or "Mozilla/5.0",
+            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+        }
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 200:
+                media_type = resp.headers.get("content-type", "image/jpeg")
+                return Response(content=resp.content, media_type=media_type, headers={"Cache-Control": "public, max-age=86400"})
+            raise HTTPException(status_code=resp.status_code, detail="Impossibile recuperare l'immagine remota")
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.warning("Errore proxy immagine per %s: %s", url, e)
+        raise HTTPException(status_code=502, detail=f"Errore proxy immagine: {e}")
 
 @app.get(
     "/api/v1/album/{discogs_id}",

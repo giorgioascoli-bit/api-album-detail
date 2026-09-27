@@ -103,8 +103,10 @@ class AggregatorService:
         # Copertina
         cover_image = None
         images = release_data.get("images", []) or (master_data.get("images", []) if master_data else [])
-        if images and isinstance(images, list):
+        if images and isinstance(images, list) and len(images) > 0:
             cover_image = images[0].get("resource_url") or images[0].get("uri")
+        if not cover_image:
+            cover_image = release_data.get("thumb") or (master_data.get("thumb") if master_data else None)
 
         # 3. Artista principale
         artists = release_data.get("artists", [])
@@ -188,6 +190,12 @@ class AggregatorService:
                     production_details.recording_date = enrichment.get("recording_date")
                 if enrichment.get("cover_art_description"):
                     cover_art_details.description = enrichment.get("cover_art_description")
+                if enrichment.get("cover_art_photographer") and not cover_art_details.photographer:
+                    cover_art_details.photographer = enrichment.get("cover_art_photographer")
+                if enrichment.get("cover_art_illustrator") and not cover_art_details.illustrator:
+                    cover_art_details.illustrator = enrichment.get("cover_art_illustrator")
+                if enrichment.get("cover_art_designer") and not cover_art_details.designer:
+                    cover_art_details.designer = enrichment.get("cover_art_designer")
 
                 ai_enriched = True
 

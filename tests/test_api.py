@@ -108,7 +108,9 @@ def test_discogs_extract_cover_and_marketplace():
     mock_release = {
         "id": 249504,
         "extraartists": [
-            {"name": "Hipgnosis (2)", "role": "Sleeve, Design"}
+            {"name": "Hipgnosis (2)", "role": "Sleeve, Design"},
+            {"name": "Aubrey Powell", "role": "Photography By"},
+            {"name": "George Hardie", "role": "Illustration"}
         ],
         "formats": [
             {"name": "Vinyl", "descriptions": ["Gatefold", "LP"]}
@@ -119,6 +121,8 @@ def test_discogs_extract_cover_and_marketplace():
     }
     cover = discogs_service.extract_cover_art_details(mock_release)
     assert "Hipgnosis" in (cover.designer or "")
+    assert "Aubrey Powell" in (cover.photographer or "")
+    assert "George Hardie" in (cover.illustrator or "")
     assert any("Gatefold" in c for c in cover.packaging_contents)
     assert any("Poster" in c for c in cover.packaging_contents)
 
@@ -128,6 +132,11 @@ def test_discogs_extract_cover_and_marketplace():
     assert market.currency == "EUR"
     assert market.highest_price_estimate is not None
     assert "sell/release/249504" in (market.marketplace_url or "")
+
+def test_image_proxy_validation():
+    # URL non valido
+    res = client.get("/api/v1/album/image-proxy?url=invalid-url")
+    assert res.status_code == 400
 
 @pytest.mark.asyncio
 async def test_album_endpoint_mocked():

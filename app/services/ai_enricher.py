@@ -65,7 +65,10 @@ Genera una risposta JSON rigorosa con i seguenti campi completi e dettagliati:
     "Curiosità 3 sulla reazione del pubblico, incidenti in studio o stranezze tecniche",
     "Curiosità 4 sull'eredità o dettagli nascosti dell'album"
   ],
-  "cover_art_description": "Descrizione approfondita e analisi artistica della copertina: ideazione, grafici/fotografi coinvolti, concept visivo, simbolismi e particolarità della confezione originale (gatefold, poster, adesivi).",
+  "cover_art_description": "Descrizione approfondita e analisi artistica della copertina: ideazione, concept visivo, simbolismi e particolarità della confezione originale (gatefold, poster, adesivi).",
+  "cover_art_photographer": "Nome del fotografo che ha scattato la foto di copertina o i ritratti se noto storicamente (es. 'Don Hunstein', 'Aubrey Powell', o null se non è una fotografia)",
+  "cover_art_illustrator": "Nome dell'illustratore o pittore della copertina se l'artwork è un disegno o dipinto (es. 'George Hardie', 'Mati Klarwein', o null se non applicabile)",
+  "cover_art_designer": "Nome del graphic designer, studio grafico o art director dell'artwork (es. 'Hipgnosis', 'Storm Thorgerson')",
   "recording_location": "Studio di registrazione principale e città (es. 'Abbey Road Studios, Londra')",
   "recording_date": "Periodo o date storiche delle sessioni di registrazione (es. 'Giugno 1972 – Gennaio 1973')",
   "reviews_summary": "Sintesi critica approfondita: accoglienza della stampa specializzata dell'epoca e moderna (Rolling Stone, NME, Pitchfork, AllMusic), impatto sul pubblico e status storico.",

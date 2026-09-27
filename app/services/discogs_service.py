@@ -335,19 +335,60 @@ class DiscogsService:
         )
 
     def extract_cover_art_details(self, release_data: Dict[str, Any], master_data: Optional[Dict[str, Any]] = None) -> CoverArtDetails:
-        """Estrae informazioni sulla copertina, designer, fotografi e contenuti fisici della confezione."""
+        """Estrae informazioni sulla copertina, designer, fotografi, illustratori e contenuti fisici della confezione."""
+        import re
+
         designers = []
-        cover_keywords = ["design", "artwork", "cover", "photography", "illustration", "sleeve", "art direction", "graphic"]
+        photographers = []
+        illustrators = []
+
+        photo_keywords = ["photograph", "photo", "shot by"]
+        illustr_keywords = ["illustrat", "drawing", "painting", "painted by", "drawn by", "artwork by", "cover art by"]
+        design_keywords = ["design", "sleeve", "art direction", "layout", "graphic", "concept"]
 
         for extra in release_data.get("extraartists", []):
             role = extra.get("role", "").lower()
-            if any(k in role for k in cover_keywords):
-                clean_name = self._clean_discogs_name(extra.get("name", ""))
-                role_orig = extra.get("role", "")
-                if clean_name:
-                    item = f"{clean_name} ({role_orig})"
-                    if item not in designers:
-                        designers.append(item)
+            clean_name = self._clean_discogs_name(extra.get("name", ""))
+            role_orig = extra.get("role", "")
+            if not clean_name:
+                continue
+
+            item = f"{clean_name} ({role_orig})"
+
+            # Fotografo della copertina
+            if any(k in role for k in photo_keywords):
+                if item not in photographers:
+                    photographers.append(item)
+            # Illustratore o pittore
+            elif any(k in role for k in illustr_keywords):
+                if item not in illustrators:
+                    illustrators.append(item)
+            # Graphic Designer o Art Director
+            elif any(k in role for k in design_keywords):
+                if item not in designers:
+                    designers.append(item)
+
+        # Parsing note per estrarre fotografo, illustratore o designer se mancanti
+        notes = (release_data.get("notes", "") or "") + " " + (master_data.get("notes", "") if master_data else "")
+        if notes:
+            if not photographers:
+                photo_match = re.search(r"(?:photography|photo(?:grapher)?|cover photo)\s+(?:by|:)\s+([^.,;\n\(\)]+)", notes, re.IGNORECASE)
+                if photo_match:
+                    p_name = photo_match.group(1).strip()
+                    if 2 < len(p_name) < 50 and not any(p_name in x for x in photographers):
+                        photographers.append(p_name)
+            if not illustrators:
+                ill_match = re.search(r"(?:illustration|illustrated|drawing|painting)\s+(?:by|:)\s+([^.,;\n\(\)]+)", notes, re.IGNORECASE)
+                if ill_match:
+                    i_name = ill_match.group(1).strip()
+                    if 2 < len(i_name) < 50 and not any(i_name in x for x in illustrators):
+                        illustrators.append(i_name)
+            if not designers:
+                des_match = re.search(r"(?:sleeve|cover design|art direction|artwork|designed)\s+(?:by|:)\s+([^.,;\n\(\)]+)", notes, re.IGNORECASE)
+                if des_match:
+                    d_name = des_match.group(1).strip()
+                    if 2 < len(d_name) < 50 and not any(d_name in x for x in designers):
+                        designers.append(d_name)
 
         # Contenuti fisici della confezione
         packaging_contents = []
@@ -364,7 +405,6 @@ class DiscogsService:
                 if "booklet" in d_lower and "Libretto fotografico" not in packaging_contents:
                     packaging_contents.append("Libretto fotografico")
 
-        notes = (release_data.get("notes", "") or "") + " " + (master_data.get("notes", "") if master_data else "")
         notes_lower = notes.lower()
         if "poster" in notes_lower and "Poster incluso" not in packaging_contents:
             packaging_contents.append("Poster incluso")
@@ -377,6 +417,8 @@ class DiscogsService:
 
         return CoverArtDetails(
             designer=", ".join(designers) if designers else None,
+            photographer=", ".join(photographers) if photographers else None,
+            illustrator=", ".join(illustrators) if illustrators else None,
             description="Artwork ufficiale da catalogo Discogs con elementi iconografici della prima stampa.",
             packaging_contents=packaging_contents
         )

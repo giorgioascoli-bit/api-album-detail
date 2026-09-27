@@ -254,13 +254,16 @@
       <div class="glass-card rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
         <div class="flex flex-col md:flex-row items-center md:items-start gap-8">
           
-          <!-- Vinyl Visual Artwork -->
-          <div class="relative group">
-            <div class="w-44 h-44 sm:w-52 sm:h-52 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-950 border border-slate-700/80 flex items-center justify-center shadow-2xl overflow-hidden relative">
-              <div class="absolute inset-0 bg-radial from-transparent to-black/60"></div>
-              <div class="w-32 h-32 rounded-full border-4 border-slate-700/50 flex items-center justify-center animate-spin-slow">
-                <div class="w-12 h-12 rounded-full bg-brand-500/30 border border-brand-400 flex items-center justify-center">
-                  <span class="text-2xl">💿</span>
+          <!-- Album Artwork Image with Vinyl Reveal -->
+          <div class="relative group flex-shrink-0">
+            <div class="w-44 h-44 sm:w-52 sm:h-52 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-950 border border-slate-700/80 shadow-2xl overflow-hidden relative flex items-center justify-center">
+              <img id="albumCoverImg" referrerpolicy="no-referrer" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="Copertina Album" />
+              <!-- Fallback animato se immagine non disponibile -->
+              <div id="coverPlaceholder" class="hidden absolute inset-0 flex items-center justify-center bg-slate-900">
+                <div class="w-32 h-32 rounded-full border-4 border-slate-700/50 flex items-center justify-center animate-spin-slow">
+                  <div class="w-12 h-12 rounded-full bg-brand-500/30 border border-brand-400 flex items-center justify-center">
+                    <span class="text-2xl">💿</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -448,10 +451,30 @@
               </span>
             </div>
             <div class="space-y-3.5 text-xs">
-              <div class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
-                <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold">Autore Artwork / Fotografo / Graphic Designer</span>
+              <!-- Fotografo (campo a sé) -->
+              <div id="photographerRow" class="hidden p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                  <span>📸</span> Fotografo della Copertina / Ritratti
+                </span>
+                <span id="photographerText" class="font-semibold text-cyan-300 text-sm mt-0.5 block">N/D</span>
+              </div>
+
+              <!-- Illustratore (campo a sé) -->
+              <div id="illustratorRow" class="hidden p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                  <span>🖌️</span> Illustratore / Pittore Artwork
+                </span>
+                <span id="illustratorText" class="font-semibold text-amber-300 text-sm mt-0.5 block">N/D</span>
+              </div>
+
+              <!-- Graphic Designer / Art Direction -->
+              <div id="designerRow" class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                  <span>📐</span> Graphic Designer / Studio Creativo
+                </span>
                 <span id="designerText" class="font-semibold text-purple-300 text-sm mt-0.5 block">N/D</span>
               </div>
+
               <p id="coverDescriptionText" class="text-slate-300 leading-relaxed"></p>
               <div>
                 <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold mb-2">Componenti & Contenuti della Confezione</span>
@@ -647,6 +670,27 @@
       document.getElementById("albumYear").textContent = album.release_year || album.year || "Anno N/D";
       document.getElementById("discogsIdBadge").textContent = `Discogs #${album.discogs_id}`;
 
+      // Cover Image
+      const coverImg = document.getElementById("albumCoverImg");
+      const coverPlaceholder = document.getElementById("coverPlaceholder");
+      if (album.cover_image) {
+        coverImg.src = album.cover_image;
+        coverImg.classList.remove("hidden");
+        coverPlaceholder.classList.add("hidden");
+        coverImg.onerror = () => {
+          const baseUrl = apiUrlInput.value.trim().replace(/\/$/, "");
+          if (!coverImg.src.includes("/api/v1/album/image-proxy")) {
+            coverImg.src = `${baseUrl}/api/v1/album/image-proxy?url=${encodeURIComponent(album.cover_image)}`;
+          } else {
+            coverImg.classList.add("hidden");
+            coverPlaceholder.classList.remove("hidden");
+          }
+        };
+      } else {
+        coverImg.classList.add("hidden");
+        coverPlaceholder.classList.remove("hidden");
+      }
+
       // AI Badge
       const aiBadge = document.getElementById("aiBadge");
       if (album.ai_enriched) {
@@ -793,7 +837,34 @@
 
       // Cover Art & Physical Packaging
       const cover = album.cover_art_details || {};
-      document.getElementById("designerText").textContent = cover.designer || "Studio Grafico / Non accreditato";
+
+      const photographerRow = document.getElementById("photographerRow");
+      if (cover.photographer) {
+        photographerRow.classList.remove("hidden");
+        document.getElementById("photographerText").textContent = cover.photographer;
+      } else {
+        photographerRow.classList.add("hidden");
+      }
+
+      const illustratorRow = document.getElementById("illustratorRow");
+      if (cover.illustrator) {
+        illustratorRow.classList.remove("hidden");
+        document.getElementById("illustratorText").textContent = cover.illustrator;
+      } else {
+        illustratorRow.classList.add("hidden");
+      }
+
+      const designerRow = document.getElementById("designerRow");
+      if (cover.designer) {
+        designerRow.classList.remove("hidden");
+        document.getElementById("designerText").textContent = cover.designer;
+      } else if (!cover.photographer && !cover.illustrator) {
+        designerRow.classList.remove("hidden");
+        document.getElementById("designerText").textContent = "Non specificato nei crediti ufficiali";
+      } else {
+        designerRow.classList.add("hidden");
+      }
+
       document.getElementById("coverDescriptionText").textContent = cover.description || "";
 
       const packagingList = document.getElementById("packagingContentsList");
