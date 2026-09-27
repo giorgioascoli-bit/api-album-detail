@@ -199,10 +199,10 @@
           <button onclick="applyPreset(10362, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
             🌙 Pink Floyd - The Dark Side of the Moon
           </button>
-          <button onclick="applyPreset(8515, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
+          <button onclick="applyPreset(13842, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
             🎺 Miles Davis - Kind of Blue
           </button>
-          <button onclick="applyPreset(5871, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
+          <button onclick="applyPreset(5863, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
             👑 Queen - A Night at the Opera
           </button>
           <button onclick="applyPreset(8883, 'master')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700/60 transition active:scale-95">
@@ -301,26 +301,36 @@
       <!-- Main Two-Column Layout -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        <!-- Left Column: Biography & Reviews -->
+        <!-- Left Column: Biography, Reviews, Curiosities, Tracklist -->
         <div class="lg:col-span-7 space-y-8">
           
-          <!-- Artist Biography Card -->
+          <!-- Artist Biography Card & Bibliography -->
           <div class="glass-card rounded-3xl p-6 sm:p-8">
             <div class="flex items-center justify-between gap-4 mb-4">
               <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                <span>📖</span> Biografia dell'Artista
+                <span>📖</span> Biografia Approfondita dell'Artista
               </h3>
               <span id="bioSource" class="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
                 Wikipedia
               </span>
             </div>
             <p id="artistBio" class="text-sm text-slate-300 leading-relaxed whitespace-pre-line"></p>
+            
+            <!-- Bibliography & Books -->
+            <div id="bibliographyWrapper" class="hidden mt-6 pt-5 border-t border-slate-800/80">
+              <h4 class="text-xs font-semibold uppercase tracking-wider text-accent-400 mb-2.5 flex items-center gap-2">
+                <span>📚</span> Bibliografia & Testi di Riferimento Consigliati
+              </h4>
+              <ul id="bibliographyList" class="space-y-2 text-xs text-slate-300">
+                <!-- Injected by JS -->
+              </ul>
+            </div>
           </div>
 
-          <!-- Reviews & Reception Card -->
+          <!-- Reviews & Reception Card + Bilingual Notes -->
           <div class="glass-card rounded-3xl p-6 sm:p-8">
             <h3 class="text-lg font-bold text-white flex items-center gap-2 mb-4">
-              <span>✍️</span> Accoglienza Critica & Note
+              <span>✍️</span> Accoglienza Critica & Note Storiche
             </h3>
             <p id="reviewsSummary" class="text-sm text-slate-300 leading-relaxed mb-4"></p>
             
@@ -331,9 +341,37 @@
               </ul>
             </div>
 
-            <div id="discogsNotesWrapper" class="hidden mt-4 pt-4 border-t border-slate-800/80">
-              <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Note Discogs:</h4>
-              <p id="discogsNotes" class="text-xs text-slate-400 italic"></p>
+            <!-- Discogs Notes with Bilingual Switcher -->
+            <div id="discogsNotesWrapper" class="hidden mt-5 pt-4 border-t border-slate-800/80">
+              <div class="flex items-center justify-between gap-2 mb-2.5">
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <span>📝</span> Note d'Archivio Discogs:
+                </h4>
+                <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800 text-xs">
+                  <button id="notesTabIt" type="button" onclick="switchNotesTab('it')" class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-brand-500/20 text-brand-300 border border-brand-500/30 transition">
+                    🇮🇹 Traduzione
+                  </button>
+                  <button id="notesTabEn" type="button" onclick="switchNotesTab('en')" class="px-2.5 py-1 rounded-md text-[11px] font-medium text-slate-400 hover:text-slate-200 transition">
+                    🇬🇧 Originale EN
+                  </button>
+                </div>
+              </div>
+              <div id="discogsNotesText" class="text-xs text-slate-300/90 leading-relaxed italic bg-slate-900/50 p-4 rounded-2xl border border-slate-800/80"></div>
+            </div>
+          </div>
+
+          <!-- Curiosities & Anecdotes Card -->
+          <div id="curiositiesCard" class="hidden glass-card rounded-3xl p-6 sm:p-8">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <span>💡</span> Curiosità, Aneddoti & Retroscena
+              </h3>
+              <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-medium">
+                In Evidenza
+              </span>
+            </div>
+            <div id="curiositiesList" class="space-y-3">
+              <!-- Injected by JS -->
             </div>
           </div>
 
@@ -363,14 +401,104 @@
           </div>
         </div>
 
-        <!-- Right Column: Musicians & Editions -->
+        <!-- Right Column: Production/Engineers, Cover Art, Marketplace, Musicians, Editions -->
         <div class="lg:col-span-5 space-y-8">
+
+          <!-- Production, Studio & Sound Engineers Card -->
+          <div class="glass-card rounded-3xl p-6 sm:p-8">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2 mb-4">
+              <span>🎙️</span> Studio, Date & Tecnici del Suono
+            </h3>
+            <div class="space-y-3 text-xs">
+              <div class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold">Luogo / Studio di Registrazione</span>
+                <span id="recordingLocationText" class="font-semibold text-brand-300 text-sm mt-0.5 block">N/D</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div class="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                  <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold">Sessioni / Data Incisione</span>
+                  <span id="recordingDateText" class="font-medium text-slate-200 mt-0.5 block">N/D</span>
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                  <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold">Pubblicazione Ufficiale</span>
+                  <span id="releaseDateText" class="font-medium text-slate-200 mt-0.5 block">N/D</span>
+                </div>
+              </div>
+              <div id="producersRow" class="hidden p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold">Produttori Artistici</span>
+                <span id="producersText" class="font-medium text-slate-200 mt-0.5 block">N/D</span>
+              </div>
+              <div class="pt-2">
+                <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold mb-2">Ingegneri Audio & Tecnici del Suono (Discogs Credits)</span>
+                <div id="engineersList" class="flex flex-wrap gap-2">
+                  <!-- Injected by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cover Artwork & Physical Packaging Card -->
+          <div class="glass-card rounded-3xl p-6 sm:p-8">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <span>🎨</span> Copertina & Packaging Fisico
+              </h3>
+              <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 font-medium">
+                Artwork Design
+              </span>
+            </div>
+            <div class="space-y-3.5 text-xs">
+              <div class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold">Autore Artwork / Fotografo / Graphic Designer</span>
+                <span id="designerText" class="font-semibold text-purple-300 text-sm mt-0.5 block">N/D</span>
+              </div>
+              <p id="coverDescriptionText" class="text-slate-300 leading-relaxed"></p>
+              <div>
+                <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold mb-2">Componenti & Contenuti della Confezione</span>
+                <div id="packagingContentsList" class="flex flex-wrap gap-1.5">
+                  <!-- Injected by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Discogs Marketplace Value Card -->
+          <div class="glass-card rounded-3xl p-6 sm:p-8">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <span>🏷️</span> Valore nel Marketplace Discogs
+              </h3>
+              <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-semibold">
+                Quotazioni Live
+              </span>
+            </div>
+            <div class="space-y-3.5 text-xs">
+              <div class="grid grid-cols-2 gap-2.5">
+                <div class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                  <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold">Prezzo Minimo Registrato</span>
+                  <span id="lowestPriceText" class="text-lg font-black text-emerald-400 mt-0.5 block">N/D</span>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80">
+                  <span class="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold">Stima Max / Copie Mint</span>
+                  <span id="highestPriceText" class="text-lg font-black text-amber-400 mt-0.5 block">N/D</span>
+                </div>
+              </div>
+              <p id="priceRangeText" class="text-slate-400 text-xs italic bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/60"></p>
+              <div class="flex items-center justify-between pt-1">
+                <span id="copiesForSaleText" class="text-slate-300 text-xs font-semibold">Copie in vendita: -</span>
+                <a id="marketplaceLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 border border-brand-500/30 text-xs font-semibold transition active:scale-95">
+                  <span>Vai al Marketplace</span>
+                  <span>↗</span>
+                </a>
+              </div>
+            </div>
+          </div>
           
           <!-- Musicians & Roles Card -->
           <div class="glass-card rounded-3xl p-6 sm:p-8">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                <span>🎸</span> Musicisti & Crediti
+                <span>🎸</span> Musicisti & Strumenti (Crediti Completi)
               </h3>
               <span id="musicianCount" class="text-xs text-slate-400"></span>
             </div>
@@ -494,11 +622,29 @@
       }
     }
 
+    let currentDiscogsNotes = { it: null, en: null };
+
+    function switchNotesTab(lang) {
+      const tabIt = document.getElementById("notesTabIt");
+      const tabEn = document.getElementById("notesTabEn");
+      const notesContainer = document.getElementById("discogsNotesText");
+
+      if (lang === 'it') {
+        tabIt.className = "px-2.5 py-1 rounded-md text-[11px] font-medium bg-brand-500/20 text-brand-300 border border-brand-500/30 transition";
+        tabEn.className = "px-2.5 py-1 rounded-md text-[11px] font-medium text-slate-400 hover:text-slate-200 transition";
+        notesContainer.textContent = currentDiscogsNotes.it || "Traduzione non disponibile per questa edizione.";
+      } else {
+        tabEn.className = "px-2.5 py-1 rounded-md text-[11px] font-medium bg-brand-500/20 text-brand-300 border border-brand-500/30 transition";
+        tabIt.className = "px-2.5 py-1 rounded-md text-[11px] font-medium text-slate-400 hover:text-slate-200 transition";
+        notesContainer.textContent = currentDiscogsNotes.en || "Note originali non presenti.";
+      }
+    }
+
     function renderAlbumDetails(album) {
       // Header Meta
       document.getElementById("albumTitle").textContent = album.title || "Titolo Sconosciuto";
       document.getElementById("artistName").textContent = album.primary_artist?.name || "Artista Sconosciuto";
-      document.getElementById("albumYear").textContent = album.year || "Anno N/D";
+      document.getElementById("albumYear").textContent = album.release_year || album.year || "Anno N/D";
       document.getElementById("discogsIdBadge").textContent = `Discogs #${album.discogs_id}`;
 
       // AI Badge
@@ -525,10 +671,26 @@
       document.getElementById("communityScore").textContent = community.community_score ? community.community_score.toFixed(2) : "N/D";
       document.getElementById("communityVotes").textContent = community.community_votes ? `${community.community_votes.toLocaleString()} voti Discogs` : "Nessuna recensione";
 
-      // Biography
+      // Biography & Bibliography
       const artist = album.primary_artist || {};
       document.getElementById("artistBio").textContent = artist.biography || "Nessuna biografia disponibile.";
-      document.getElementById("bioSource").textContent = artist.source === "wikipedia_it" ? "Wikipedia (IT)" : (artist.source || "Discogs");
+      document.getElementById("bioSource").textContent = artist.source === "gemini_ai" ? "Gemini AI" : (artist.source === "wikipedia_it" ? "Wikipedia (IT)" : (artist.source || "Discogs"));
+
+      const biblioWrapper = document.getElementById("bibliographyWrapper");
+      const biblioList = document.getElementById("bibliographyList");
+      biblioList.innerHTML = "";
+      const biblioItems = album.bibliography || artist.bibliography || [];
+      if (biblioItems && biblioItems.length > 0) {
+        biblioWrapper.classList.remove("hidden");
+        biblioItems.forEach(b => {
+          const li = document.createElement("li");
+          li.className = "flex items-start gap-2 text-slate-300";
+          li.innerHTML = `<span class="text-accent-400 font-bold">•</span><span>${b}</span>`;
+          biblioList.appendChild(li);
+        });
+      } else {
+        biblioWrapper.classList.add("hidden");
+      }
 
       // Reviews
       document.getElementById("reviewsSummary").textContent = community.summary || "Nessuna recensione disponibile.";
@@ -548,13 +710,40 @@
         criticalPointsWrapper.classList.add("hidden");
       }
 
-      // Discogs Notes
+      // Discogs Notes with Bilingual Switcher
       const discogsNotesWrapper = document.getElementById("discogsNotesWrapper");
-      if (community.discogs_notes) {
+      currentDiscogsNotes.en = community.discogs_notes || null;
+      currentDiscogsNotes.it = community.discogs_notes_translated || null;
+
+      if (currentDiscogsNotes.en || currentDiscogsNotes.it) {
         discogsNotesWrapper.classList.remove("hidden");
-        document.getElementById("discogsNotes").textContent = `"${community.discogs_notes}"`;
+        if (currentDiscogsNotes.it) {
+          switchNotesTab('it');
+        } else {
+          switchNotesTab('en');
+        }
       } else {
         discogsNotesWrapper.classList.add("hidden");
+      }
+
+      // Curiosities & Anecdotes
+      const curiositiesCard = document.getElementById("curiositiesCard");
+      const curiositiesList = document.getElementById("curiositiesList");
+      curiositiesList.innerHTML = "";
+      const curiosities = album.curiosities || [];
+      if (curiosities && curiosities.length > 0) {
+        curiositiesCard.classList.remove("hidden");
+        curiosities.forEach((c, idx) => {
+          const div = document.createElement("div");
+          div.className = "flex items-start gap-3 p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80";
+          div.innerHTML = `
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center justify-center text-xs font-bold">${idx + 1}</span>
+            <p class="text-xs text-slate-200 leading-relaxed">${c}</p>
+          `;
+          curiositiesList.appendChild(div);
+        });
+      } else {
+        curiositiesCard.classList.add("hidden");
       }
 
       // Tracklist
@@ -573,6 +762,71 @@
         `;
         tableBody.appendChild(tr);
       });
+
+      // Production Details & Sound Engineers
+      const prod = album.production_details || {};
+      document.getElementById("recordingLocationText").textContent = prod.recording_location || "Dato non specificato nei crediti ufficiali";
+      document.getElementById("recordingDateText").textContent = prod.recording_date || "N/D";
+      document.getElementById("releaseDateText").textContent = prod.release_date || album.release_year || album.year || "N/D";
+
+      const producersRow = document.getElementById("producersRow");
+      if (prod.producers && prod.producers.length > 0) {
+        producersRow.classList.remove("hidden");
+        document.getElementById("producersText").textContent = prod.producers.join(", ");
+      } else {
+        producersRow.classList.add("hidden");
+      }
+
+      const engineersList = document.getElementById("engineersList");
+      engineersList.innerHTML = "";
+      const engineers = prod.sound_engineers || [];
+      if (engineers.length > 0) {
+        engineers.forEach(eng => {
+          const badge = document.createElement("div");
+          badge.className = "px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700/80 text-[11px] text-slate-200 flex flex-col";
+          badge.innerHTML = `<span class="font-semibold text-slate-100">${eng.name}</span><span class="text-[10px] text-brand-400 font-medium">${eng.role}</span>`;
+          engineersList.appendChild(badge);
+        });
+      } else {
+        engineersList.innerHTML = `<span class="text-xs text-slate-500 italic">Nessun tecnico audio esplicitamente censito.</span>`;
+      }
+
+      // Cover Art & Physical Packaging
+      const cover = album.cover_art_details || {};
+      document.getElementById("designerText").textContent = cover.designer || "Studio Grafico / Non accreditato";
+      document.getElementById("coverDescriptionText").textContent = cover.description || "";
+
+      const packagingList = document.getElementById("packagingContentsList");
+      packagingList.innerHTML = "";
+      const contents = cover.packaging_contents || [];
+      if (contents.length > 0) {
+        contents.forEach(item => {
+          const badge = document.createElement("span");
+          badge.className = "px-2.5 py-1 rounded-lg bg-purple-500/15 text-purple-300 border border-purple-500/25 text-[11px] font-medium";
+          badge.textContent = item;
+          packagingList.appendChild(badge);
+        });
+      } else {
+        packagingList.innerHTML = `<span class="text-xs text-slate-500 italic">Confezione standard (LP o CD singolo).</span>`;
+      }
+
+      // Marketplace Pricing
+      const market = album.marketplace || {};
+      document.getElementById("lowestPriceText").textContent = (market.lowest_price !== null && market.lowest_price !== undefined) ? `${market.lowest_price.toFixed(2)} ${market.currency || '€'}` : "N/D";
+      document.getElementById("highestPriceText").textContent = market.highest_price_estimate ? `${market.highest_price_estimate.toFixed(2)} ${market.currency || '€'}` : "Quotazione d'asta";
+      document.getElementById("priceRangeText").textContent = market.price_range_formatted || "Prezzi variabili a seconda delle condizioni del supporto (VG/NM/Mint).";
+      document.getElementById("copiesForSaleText").textContent = market.num_for_sale ? `${market.num_for_sale.toLocaleString()} copie disponibili` : "Disponibilità variabile";
+
+      const marketLink = document.getElementById("marketplaceLink");
+      if (market.marketplace_url) {
+        marketLink.href = market.marketplace_url;
+        marketLink.classList.remove("hidden");
+      } else if (album.discogs_id) {
+        marketLink.href = `https://www.discogs.com/${album.id_type === 'master' ? 'master' : 'release'}/${album.discogs_id}`;
+        marketLink.classList.remove("hidden");
+      } else {
+        marketLink.classList.add("hidden");
+      }
 
       // Musicians
       const musiciansList = document.getElementById("musiciansList");

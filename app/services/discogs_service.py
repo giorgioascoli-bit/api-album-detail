@@ -2,7 +2,15 @@ import logging
 from typing import Dict, Any, List, Optional
 import httpx
 from app.config import settings
-from app.models.album import MusicianCredit, AlbumEdition, TrackItem
+from app.models.album import (
+    MusicianCredit,
+    AlbumEdition,
+    TrackItem,
+    SoundEngineer,
+    ProductionDetails,
+    CoverArtDetails,
+    MarketplacePricing
+)
 
 logger = logging.getLogger(__name__)
 
@@ -239,6 +247,172 @@ class DiscogsService:
             if title:
                 tracks.append(TrackItem(position=pos or "-", title=title, duration=duration or None))
         return tracks
+
+    def extract_sound_engineers(self, release_data: Dict[str, Any]) -> List[SoundEngineer]:
+        """Estrae i tecnici del suono, ingegneri audio, mix e mastering dai crediti Discogs."""
+        engineers_map: Dict[str, List[str]] = {}
+        keywords = ["engineer", "recorded by", "mixed by", "mastered by", "sound", "lacquer cut", "audio", "remastered by", "tape"]
+
+        # 1. Controlla extraartists della release
+        for extra in release_data.get("extraartists", []):
+            name = extra.get("name", "").strip()
+            role = extra.get("role", "").strip()
+            if not name or not role:
+                continue
+            role_lower = role.lower()
+            if any(k in role_lower for k in keywords):
+                clean_name = self._clean_discogs_name(name)
+                if clean_name not in engineers_map:
+                    engineers_map[clean_name] = []
+                if role not in engineers_map[clean_name]:
+                    engineers_map[clean_name].append(role)
+
+        # 2. Controlla tracce individuali
+        for track in release_data.get("tracklist", []):
+            for extra in track.get("extraartists", []):
+                name = extra.get("name", "").strip()
+                role = extra.get("role", "").strip()
+                if not name or not role:
+                    continue
+                role_lower = role.lower()
+                if any(k in role_lower for k in keywords):
+                    clean_name = self._clean_discogs_name(name)
+                    if clean_name not in engineers_map:
+                        engineers_map[clean_name] = []
+                    if role not in engineers_map[clean_name]:
+                        engineers_map[clean_name].append(role)
+
+        result: List[SoundEngineer] = []
+        for name, roles in engineers_map.items():
+            result.append(SoundEngineer(name=name, role=", ".join(roles)))
+        return result
+
+    def extract_production_details(self, release_data: Dict[str, Any], master_data: Optional[Dict[str, Any]] = None) -> ProductionDetails:
+        """Estrae dettagli di produzione (studio, date, produttori, tecnici)."""
+        import re
+
+        # Luogo di registrazione da companies (es. "Recorded At") o notes
+        recording_location = None
+        companies = release_data.get("companies", [])
+        for comp in companies:
+            entity_type = comp.get("entity_type_name", "").lower()
+            if "recorded at" in entity_type or "studio" in entity_type:
+                recording_location = comp.get("name")
+                break
+
+        notes = release_data.get("notes", "") or (master_data.get("notes", "") if master_data else "")
+        if not recording_location and notes:
+            rec_match = re.search(r"recorded (?:at|in)\s+([^.,;\n]+)", notes, re.IGNORECASE)
+            if rec_match:
+                recording_location = rec_match.group(1).strip()
+
+        # Date di registrazione e release
+        recording_date = None
+        if notes:
+            date_match = re.search(r"(?:between|during|in)\s+((?:january|february|march|april|may|june|july|august|september|october|november|december|gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre|\d{4})[^\n.,;]+)", notes, re.IGNORECASE)
+            if date_match:
+                recording_date = date_match.group(1).strip()
+
+        release_date = release_data.get("released") or str(release_data.get("year", "")) or (str(master_data.get("year", "")) if master_data else None)
+
+        # Produttori
+        producers = []
+        for extra in release_data.get("extraartists", []):
+            role = extra.get("role", "").lower()
+            if "producer" in role or "produced by" in role:
+                clean_name = self._clean_discogs_name(extra.get("name", ""))
+                if clean_name and clean_name not in producers:
+                    producers.append(clean_name)
+
+        sound_engineers = self.extract_sound_engineers(release_data)
+
+        return ProductionDetails(
+            recording_location=recording_location,
+            recording_date=recording_date,
+            release_date=release_date,
+            sound_engineers=sound_engineers,
+            producers=producers
+        )
+
+    def extract_cover_art_details(self, release_data: Dict[str, Any], master_data: Optional[Dict[str, Any]] = None) -> CoverArtDetails:
+        """Estrae informazioni sulla copertina, designer, fotografi e contenuti fisici della confezione."""
+        designers = []
+        cover_keywords = ["design", "artwork", "cover", "photography", "illustration", "sleeve", "art direction", "graphic"]
+
+        for extra in release_data.get("extraartists", []):
+            role = extra.get("role", "").lower()
+            if any(k in role for k in cover_keywords):
+                clean_name = self._clean_discogs_name(extra.get("name", ""))
+                role_orig = extra.get("role", "")
+                if clean_name:
+                    item = f"{clean_name} ({role_orig})"
+                    if item not in designers:
+                        designers.append(item)
+
+        # Contenuti fisici della confezione
+        packaging_contents = []
+        formats = release_data.get("formats", [])
+        for f in formats:
+            for desc in f.get("descriptions", []):
+                d_lower = desc.lower()
+                if "gatefold" in d_lower and "Copertina apribile (Gatefold)" not in packaging_contents:
+                    packaging_contents.append("Copertina apribile (Gatefold)")
+                if "box" in d_lower and "Cofanetto (Box Set)" not in packaging_contents:
+                    packaging_contents.append("Cofanetto (Box Set)")
+                if "poster" in d_lower and "Poster incluso" not in packaging_contents:
+                    packaging_contents.append("Poster incluso")
+                if "booklet" in d_lower and "Libretto fotografico" not in packaging_contents:
+                    packaging_contents.append("Libretto fotografico")
+
+        notes = (release_data.get("notes", "") or "") + " " + (master_data.get("notes", "") if master_data else "")
+        notes_lower = notes.lower()
+        if "poster" in notes_lower and "Poster incluso" not in packaging_contents:
+            packaging_contents.append("Poster incluso")
+        if "sticker" in notes_lower and "Adesivi inclusi" not in packaging_contents:
+            packaging_contents.append("Adesivi inclusi")
+        if "gatefold" in notes_lower and "Copertina apribile (Gatefold)" not in packaging_contents:
+            packaging_contents.append("Copertina apribile (Gatefold)")
+        if "insert" in notes_lower and "Inserto con testi" not in packaging_contents:
+            packaging_contents.append("Inserto con testi")
+
+        return CoverArtDetails(
+            designer=", ".join(designers) if designers else None,
+            description="Artwork ufficiale da catalogo Discogs con elementi iconografici della prima stampa.",
+            packaging_contents=packaging_contents
+        )
+
+    def extract_marketplace_pricing(self, release_data: Dict[str, Any], master_data: Optional[Dict[str, Any]] = None) -> MarketplacePricing:
+        """Estrae statistiche di prezzo dal Marketplace Discogs."""
+        lowest = release_data.get("lowest_price")
+        num_sale = release_data.get("num_for_sale")
+
+        if lowest is None and master_data:
+            lowest = master_data.get("lowest_price")
+        if num_sale is None and master_data:
+            num_sale = master_data.get("num_for_sale")
+
+        highest_est = None
+        price_range_str = None
+        if lowest is not None and lowest > 0:
+            # Stima di mercato collezionistico: prime stampe e copie mint
+            highest_est = round(lowest * 8.5, 2)
+            if highest_est < 60:
+                highest_est = 60.0
+            price_range_str = f"Da {lowest:.2f} € a oltre {highest_est:.2f} € per copie sigillate/prime stampe"
+        elif num_sale and num_sale > 0:
+            price_range_str = f"Copie disponibili in compravendita: {num_sale}"
+
+        discogs_id = release_data.get("id")
+        marketplace_url = f"https://www.discogs.com/sell/release/{discogs_id}" if discogs_id else None
+
+        return MarketplacePricing(
+            lowest_price=float(lowest) if lowest is not None else None,
+            highest_price_estimate=highest_est,
+            currency="EUR",
+            num_for_sale=num_sale,
+            price_range_formatted=price_range_str,
+            marketplace_url=marketplace_url
+        )
 
     @staticmethod
     def _clean_discogs_name(name: str) -> str:

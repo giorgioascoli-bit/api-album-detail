@@ -74,20 +74,13 @@ class WikipediaService:
                 if not page_title:
                     return None
 
-                # Richiedi il summary tramite REST API di Wikimedia
-                encoded_title = urllib.parse.quote(page_title.replace(" ", "_"))
-                summary_url = f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{encoded_title}"
-                summary_resp = await client.get(summary_url, headers=self.headers)
-                if summary_resp.status_code == 200:
-                    s_data = summary_resp.json()
-                    return s_data.get("extract")
-
-                # Fallback API tradizionale
+                # Utilizza direttamente l'API MediaWiki con explaintext esteso (fino a 4000 caratteri) per una biografia enciclopedica approfondita
                 extract_params = {
                     "action": "query",
                     "prop": "extracts",
                     "exintro": 1,
                     "explaintext": 1,
+                    "exchars": 4000,
                     "titles": page_title,
                     "format": "json"
                 }
@@ -96,7 +89,17 @@ class WikipediaService:
                     ext_data = ext_resp.json()
                     pages = ext_data.get("query", {}).get("pages", {})
                     for p in pages.values():
-                        return p.get("extract")
+                        ext = p.get("extract")
+                        if ext and len(ext.strip()) > 50:
+                            return ext.strip()
+
+                # Fallback REST API di Wikimedia se la query tradizionale fallisce
+                encoded_title = urllib.parse.quote(page_title.replace(" ", "_"))
+                summary_url = f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{encoded_title}"
+                summary_resp = await client.get(summary_url, headers=self.headers)
+                if summary_resp.status_code == 200:
+                    s_data = summary_resp.json()
+                    return s_data.get("extract")
 
                 return None
             except Exception as e:

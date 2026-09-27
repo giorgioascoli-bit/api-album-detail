@@ -37,30 +37,45 @@ class AIEnricherService:
             return None
 
         prompt = f"""
-Sei un autorevole musicologo ed enciclopedia musicale.
-Devi generare un'analisi dettagliata e completa in lingua '{lang}' per l'album musicale:
-Titolo: "{album_title}"
-Artista Principale: "{artist_name}"
-Anno: {year or 'N/D'}
-Generi/Stili: {', '.join(genres) if genres else 'N/D'}
+Sei un illustre musicologo, storico della musica ed enciclopedia vivente.
+Genera un dossier monografico autorevole, approfondito ed esaustivo in lingua '{lang}' per l'album musicale:
+- Titolo: "{album_title}"
+- Artista Principale: "{artist_name}"
+- Anno: {year or 'N/D'}
+- Generi/Stili: {', '.join(genres) if genres else 'N/D'}
 
-Dati raccolti sul web e archivi:
-- Note Discogs: {discogs_notes[:1000] if discogs_notes else 'Nessuna'}
-- Biografia Wikipedia grezza: {wikipedia_bio[:1200] if wikipedia_bio else 'Nessuna'}
-- Profilo Discogs: {discogs_bio[:800] if discogs_bio else 'Nessuno'}
-- Estratto ricezione critica Wikipedia: {wikipedia_reception[:1500] if wikipedia_reception else 'Nessuno'}
+Dati storici e archivistici di partenza:
+- Note Discogs originali: {discogs_notes[:2500] if discogs_notes else 'Nessuna'}
+- Estratto biografico Wikipedia: {wikipedia_bio[:3000] if wikipedia_bio else 'Nessuno'}
+- Profilo archivio Discogs: {discogs_bio[:1200] if discogs_bio else 'Nessuno'}
+- Estratto critico Wikipedia: {wikipedia_reception[:2000] if wikipedia_reception else 'Nessuno'}
 
-Genera una risposta JSON rigorosa con questa esatta struttura:
+Genera una risposta JSON rigorosa con i seguenti campi completi e dettagliati:
 {{
-  "biography": "Biografia approfondita, fluida e accurata dell'artista/musicista principale in {lang} (2-4 paragrafi che coprono carriera, stile, impatto e contesto in cui si inserisce questo album).",
-  "reviews_summary": "Sintesi critica dell'album: come è stato accolto dalla critica (es. Rolling Stone, Pitchfork, AllMusic, stampa dell'epoca), impatto culturale e consenso generale.",
+  "biography": "Biografia enciclopedica approfondita ed estesa dell'artista/band principale in {lang} (4-6 paragrafi ricchi di dettagli: formazione e primi anni, influenze e stile, genesi ed evoluzione musicale fino a questo album, maturità artistica e lascito culturale). Non essere sintetico, fornisci una trattazione completa.",
+  "bibliography": [
+    "Libro, saggio o biografia autorevole 1 (Autore, 'Titolo', Anno/Editore)",
+    "Libro, saggio o monografia autorevole 2",
+    "Pubblicazione storica o articolo di riferimento 3"
+  ],
+  "discogs_notes_translated": "Traduzione fluida, fedele ed elegante in {lang} delle note Discogs fornite sopra (se presenti, altrimenti null).",
+  "curiosities": [
+    "Curiosità o aneddoto storico 1 sulla registrazione, musicisti o studio",
+    "Curiosità 2 su uno specifico brano, testo o campionamento",
+    "Curiosità 3 sulla reazione del pubblico, incidenti in studio o stranezze tecniche",
+    "Curiosità 4 sull'eredità o dettagli nascosti dell'album"
+  ],
+  "cover_art_description": "Descrizione approfondita e analisi artistica della copertina: ideazione, grafici/fotografi coinvolti, concept visivo, simbolismi e particolarità della confezione originale (gatefold, poster, adesivi).",
+  "recording_location": "Studio di registrazione principale e città (es. 'Abbey Road Studios, Londra')",
+  "recording_date": "Periodo o date storiche delle sessioni di registrazione (es. 'Giugno 1972 – Gennaio 1973')",
+  "reviews_summary": "Sintesi critica approfondita: accoglienza della stampa specializzata dell'epoca e moderna (Rolling Stone, NME, Pitchfork, AllMusic), impatto sul pubblico e status storico.",
   "critical_reception": [
-    "Punto o citazione chiave 1 sulla ricezione dell'album",
-    "Punto o citazione chiave 2 sulla produzione, arrangiamenti o testi",
-    "Punto o citazione chiave 3 sull'eredità e status storico del disco"
+    "Punto chiave o giudizio critico 1",
+    "Punto chiave o giudizio critico 2",
+    "Punto chiave o giudizio critico 3"
   ]
 }}
-Rispondi ESCLUSIVAMENTE con il JSON, senza blocchi di markdown o testo aggiuntivo.
+Rispondi ESCLUSIVAMENTE con il JSON valido, senza blocchi di codice markdown o testo introduttivo/conclusivo.
 """
         url = GEMINI_API_URL.format(model=self.model)
         headers = {"Content-Type": "application/json"}

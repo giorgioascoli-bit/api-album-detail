@@ -83,6 +83,52 @@ def test_discogs_extract_main_editions():
     assert editions[1].id == 1001
     assert "Rimasterizzata" in (editions[1].notable_notes or "")
 
+def test_discogs_extract_production_and_engineers():
+    mock_release = {
+        "extraartists": [
+            {"name": "Alan Parsons", "role": "Engineer [Sound]", "tracks": ""},
+            {"name": "Chris Thomas", "role": "Mixing Supervisor", "tracks": ""}
+        ],
+        "companies": [
+            {"entity_type_name": "Recorded At", "name": "Abbey Road Studios, London"}
+        ],
+        "released": "1973-03-01",
+        "notes": "Recorded between June 1972 and January 1973."
+    }
+    engineers = discogs_service.extract_sound_engineers(mock_release)
+    assert len(engineers) >= 1
+    assert any("Alan Parsons" in e.name for e in engineers)
+
+    prod = discogs_service.extract_production_details(mock_release)
+    assert "Abbey Road Studios" in (prod.recording_location or "")
+    assert "1973" in (prod.release_date or "")
+    assert len(prod.sound_engineers) >= 1
+
+def test_discogs_extract_cover_and_marketplace():
+    mock_release = {
+        "id": 249504,
+        "extraartists": [
+            {"name": "Hipgnosis (2)", "role": "Sleeve, Design"}
+        ],
+        "formats": [
+            {"name": "Vinyl", "descriptions": ["Gatefold", "LP"]}
+        ],
+        "lowest_price": 14.50,
+        "num_for_sale": 180,
+        "notes": "Includes 2 posters and 2 stickers."
+    }
+    cover = discogs_service.extract_cover_art_details(mock_release)
+    assert "Hipgnosis" in (cover.designer or "")
+    assert any("Gatefold" in c for c in cover.packaging_contents)
+    assert any("Poster" in c for c in cover.packaging_contents)
+
+    market = discogs_service.extract_marketplace_pricing(mock_release)
+    assert market.lowest_price == 14.50
+    assert market.num_for_sale == 180
+    assert market.currency == "EUR"
+    assert market.highest_price_estimate is not None
+    assert "sell/release/249504" in (market.marketplace_url or "")
+
 @pytest.mark.asyncio
 async def test_album_endpoint_mocked():
     mock_release = {
@@ -93,13 +139,17 @@ async def test_album_endpoint_mocked():
         "styles": ["Prog Rock"],
         "artists": [{"id": 45467, "name": "Pink Floyd"}],
         "extraartists": [
-            {"name": "David Gilmour", "role": "Guitar", "tracks": ""}
+            {"name": "David Gilmour", "role": "Guitar", "tracks": ""},
+            {"name": "Alan Parsons", "role": "Engineer", "tracks": ""}
         ],
         "tracklist": [
             {"position": "A1", "title": "Speak to Me", "duration": "1:05"}
         ],
         "master_id": 10362,
-        "community": {"rating": {"average": 4.88, "count": 12000}}
+        "community": {"rating": {"average": 4.88, "count": 12000}},
+        "lowest_price": 19.99,
+        "num_for_sale": 45,
+        "notes": "Mastered at Abbey Road Studios."
     }
 
     with patch.object(discogs_service, "get_release", new=AsyncMock(return_value=mock_release)), \
@@ -119,6 +169,13 @@ async def test_album_endpoint_mocked():
         assert len(data["tracklist"]) == 1
         assert data["tracklist"][0]["title"] == "Speak to Me"
         assert data["ai_enriched"] is False
+        assert "production_details" in data
+        assert len(data["production_details"]["sound_engineers"]) >= 1
+        assert "cover_art_details" in data
+        assert "marketplace" in data
+        assert data["marketplace"]["lowest_price"] == 19.99
+        assert "bibliography" in data
+        assert len(data["bibliography"]) >= 1
 
 @pytest.mark.asyncio
 async def test_ai_enricher_flow():
@@ -142,7 +199,10 @@ async def test_ai_enricher_flow():
     mock_ai_data = {
         "biography": "Biografia sintetica generata da Gemini.",
         "reviews_summary": "Sintesi critica eccellente generata da Gemini.",
-        "critical_reception": ["Capolavoro assoluto", "Pietra miliare del rock"]
+        "critical_reception": ["Capolavoro assoluto", "Pietra miliare del rock"],
+        "curiosities": ["Curiosità su Abbey Road", "Curiosità sui suoni del registratore"],
+        "bibliography": ["Mason, Nick - Inside Out", "Harris, John - The Dark Side of the Moon"],
+        "discogs_notes_translated": "Note storiche tradotte in italiano da Gemini."
     }
     with patch("app.services.aggregator_service.ai_enricher.is_available", return_value=True), \
          patch("app.services.aggregator_service.ai_enricher.enrich_album_data", new=AsyncMock(return_value=mock_ai_data)), \
@@ -159,5 +219,9 @@ async def test_ai_enricher_flow():
         assert data["primary_artist"]["biography"] == "Biografia sintetica generata da Gemini."
         assert data["reviews_and_comments"]["summary"] == "Sintesi critica eccellente generata da Gemini."
         assert "Capolavoro assoluto" in data["reviews_and_comments"]["critical_reception"]
+        assert data["reviews_and_comments"]["discogs_notes_translated"] == "Note storiche tradotte in italiano da Gemini."
+        assert len(data["curiosities"]) == 2
+        assert len(data["bibliography"]) == 2
+
 
 
