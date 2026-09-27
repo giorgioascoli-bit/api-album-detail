@@ -87,10 +87,10 @@
               Music Album Explorer
             </h1>
             <span class="px-2 py-0.5 rounded-full text-[11px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              v1.2.0-dev
+              v1.3.0-dev
             </span>
           </div>
-          <p class="text-xs text-slate-400">Powered by Google Cloud Run & Discogs API • <span class="font-mono text-slate-400">Build 2026.09.27.02</span></p>
+          <p class="text-xs text-slate-400">Powered by Google Cloud Run & Discogs API • <span class="font-mono text-slate-400">Build 2026.09.27.03</span></p>
         </div>
       </div>
 
@@ -105,27 +105,40 @@
     <!-- Configuration & Search Controls -->
     <section class="glass-card rounded-3xl p-6 sm:p-8 mb-8 shadow-2xl">
       
-      <!-- API Server URL Setting -->
-      <div class="mb-6 pb-6 border-b border-slate-800/60">
-        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-          🌐 Endpoint API (Google Cloud Run o Locale)
-        </label>
-        <div class="flex flex-col sm:flex-row gap-2">
-          <div class="relative flex-1">
+      <!-- API Server URL & Gemini AI Key Setting -->
+      <div class="mb-6 pb-6 border-b border-slate-800/60 grid grid-cols-1 md:grid-cols-12 gap-4">
+        <div class="md:col-span-7">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            🌐 Endpoint API (Google Cloud Run o Locale)
+          </label>
+          <div class="flex gap-2">
             <input 
               type="text" 
               id="apiUrlInput" 
               placeholder="https://api-album-detail-xxxxxx.europe-west1.run.app" 
               class="w-full glass-input rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none transition font-mono"
             />
+            <button 
+              id="testConnectionBtn" 
+              onclick="testApiConnection()" 
+              class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-semibold text-slate-200 border border-slate-700 transition whitespace-nowrap"
+            >
+              Test Connessione
+            </button>
           </div>
-          <button 
-            id="testConnectionBtn" 
-            onclick="testApiConnection()" 
-            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-semibold text-slate-200 border border-slate-700 transition"
-          >
-            Test Connessione
-          </button>
+        </div>
+
+        <div class="md:col-span-5">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+            <span>🔑 Google Gemini Key (Opzionale)</span>
+            <span class="text-[10px] text-amber-400 font-normal">Per AI & Traduzione</span>
+          </label>
+          <input 
+            type="password" 
+            id="geminiKeyInput" 
+            placeholder="AIzaSy... (lascia vuoto per fallback)" 
+            class="w-full glass-input rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none transition font-mono"
+          />
         </div>
       </div>
 
@@ -351,17 +364,25 @@
 
             <!-- Discogs Notes with Bilingual Switcher -->
             <div id="discogsNotesWrapper" class="hidden mt-5 pt-4 border-t border-slate-800/80">
-              <div class="flex items-center justify-between gap-2 mb-2.5">
-                <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <span>📝</span> Note d'Archivio Discogs:
-                </h4>
-                <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800 text-xs">
-                  <button id="notesTabIt" type="button" onclick="switchNotesTab('it')" class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-brand-500/20 text-brand-300 border border-brand-500/30 transition">
-                    🇮🇹 Traduzione
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                <div class="flex items-center gap-2">
+                  <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <span>📝</span> Note d'Archivio Discogs:
+                  </h4>
+                  <span id="notesSourceBadge" class="hidden text-[10px] px-2 py-0.5 rounded-full font-medium"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button id="retranslateBtn" type="button" onclick="triggerNotesAiTranslation()" title="Traduce o aggiorna la traduzione con AI" class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 active:scale-95 transition flex items-center gap-1">
+                    <span>✨</span> Ritraducono con AI
                   </button>
-                  <button id="notesTabEn" type="button" onclick="switchNotesTab('en')" class="px-2.5 py-1 rounded-md text-[11px] font-medium text-slate-400 hover:text-slate-200 transition">
-                    🇬🇧 Originale EN
-                  </button>
+                  <div class="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800 text-xs">
+                    <button id="notesTabIt" type="button" onclick="switchNotesTab('it')" class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-brand-500/20 text-brand-300 border border-brand-500/30 transition">
+                      🇮🇹 Traduzione
+                    </button>
+                    <button id="notesTabEn" type="button" onclick="switchNotesTab('en')" class="px-2.5 py-1 rounded-md text-[11px] font-medium text-slate-400 hover:text-slate-200 transition">
+                      🇬🇧 Originale EN
+                    </button>
+                  </div>
                 </div>
               </div>
               <div id="discogsNotesText" class="text-xs text-slate-300/90 leading-relaxed italic bg-slate-900/50 p-4 rounded-2xl border border-slate-800/80"></div>
@@ -569,9 +590,9 @@
           <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Google Cloud Run
         </span>
         <span class="text-slate-700">•</span>
-        <span>Versione Sviluppo: <strong class="font-mono text-amber-300 font-bold">v1.2.0-dev</strong></span>
+        <span>Versione Sviluppo: <strong class="font-mono text-amber-300 font-bold">v1.3.0-dev</strong></span>
         <span class="text-slate-700">•</span>
-        <span>Build ID: <strong class="font-mono text-slate-300">2026.09.27.02</strong></span>
+        <span>Build ID: <strong class="font-mono text-slate-300">2026.09.27.03</strong></span>
         <span class="text-slate-700">•</span>
         <a href="/docs" target="_blank" class="text-brand-400 hover:text-brand-300 transition underline">Swagger Docs</a>
         <span class="text-slate-700">•</span>
@@ -597,6 +618,18 @@
       testApiConnection();
     });
 
+    // Configura valore iniziale chiave Gemini
+    const geminiKeyInput = document.getElementById("geminiKeyInput");
+    const storedGeminiKey = localStorage.getItem("album_gemini_key");
+    if (storedGeminiKey && geminiKeyInput) {
+      geminiKeyInput.value = storedGeminiKey;
+    }
+    if (geminiKeyInput) {
+      geminiKeyInput.addEventListener("change", () => {
+        localStorage.setItem("album_gemini_key", geminiKeyInput.value.trim());
+      });
+    }
+
     async function testApiConnection() {
       const baseUrl = apiUrlInput.value.trim().replace(/\/$/, "");
       const badge = document.getElementById("apiStatusBadge");
@@ -608,7 +641,8 @@
         if (res.ok) {
           const data = await res.json();
           const verStr = data.version ? ` [API ${data.version}]` : "";
-          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> API Online${verStr} (Healthy)`;
+          const aiStr = data.ai_enricher_configured ? " • AI On" : "";
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> API Online${verStr}${aiStr}`;
           badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-800";
         } else {
           throw new Error(`HTTP ${res.status}`);
@@ -633,6 +667,7 @@
       const idType = document.getElementById("idTypeSelect").value;
       const lang = document.getElementById("langSelect").value;
       const synthesize = document.getElementById("synthesizeCheck").checked;
+      const geminiKey = geminiKeyInput ? geminiKeyInput.value.trim() : "";
 
       if (!discogsId) return;
 
@@ -642,10 +677,18 @@
       document.getElementById("loadingState").classList.remove("hidden");
       document.getElementById("searchBtn").disabled = true;
 
-      const endpoint = `${baseUrl}/api/v1/album/${discogsId}?id_type=${idType}&lang=${lang}&synthesize=${synthesize}`;
+      let endpoint = `${baseUrl}/api/v1/album/${discogsId}?id_type=${idType}&lang=${lang}&synthesize=${synthesize}`;
+      if (geminiKey) {
+        endpoint += `&gemini_key=${encodeURIComponent(geminiKey)}`;
+      }
+
+      const fetchHeaders = {};
+      if (geminiKey) {
+        fetchHeaders["X-Gemini-Key"] = geminiKey;
+      }
 
       try {
-        const response = await fetch(endpoint);
+        const response = await fetch(endpoint, { headers: fetchHeaders });
         if (!response.ok) {
           let errDetail = `Status ${response.status}: ${response.statusText}`;
           try {
@@ -666,7 +709,23 @@
       }
     }
 
-    let currentDiscogsNotes = { it: null, en: null };
+    let currentDiscogsNotes = { it: null, en: null, source: null };
+
+    function updateNotesSourceBadge(source) {
+      const badge = document.getElementById("notesSourceBadge");
+      if (!badge) return;
+      if (source === "gemini_ai") {
+        badge.textContent = "✨ Gemini AI";
+        badge.className = "text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30";
+        badge.classList.remove("hidden");
+      } else if (source === "neural_mt") {
+        badge.textContent = "🌐 Traduzione Neurale";
+        badge.className = "text-[10px] px-2 py-0.5 rounded-full font-medium bg-sky-500/20 text-sky-300 border border-sky-500/30";
+        badge.classList.remove("hidden");
+      } else {
+        badge.classList.add("hidden");
+      }
+    }
 
     function switchNotesTab(lang) {
       const tabIt = document.getElementById("notesTabIt");
@@ -677,10 +736,53 @@
         tabIt.className = "px-2.5 py-1 rounded-md text-[11px] font-medium bg-brand-500/20 text-brand-300 border border-brand-500/30 transition";
         tabEn.className = "px-2.5 py-1 rounded-md text-[11px] font-medium text-slate-400 hover:text-slate-200 transition";
         notesContainer.textContent = currentDiscogsNotes.it || "Traduzione non disponibile per questa edizione.";
+        updateNotesSourceBadge(currentDiscogsNotes.source);
       } else {
         tabEn.className = "px-2.5 py-1 rounded-md text-[11px] font-medium bg-brand-500/20 text-brand-300 border border-brand-500/30 transition";
         tabIt.className = "px-2.5 py-1 rounded-md text-[11px] font-medium text-slate-400 hover:text-slate-200 transition";
         notesContainer.textContent = currentDiscogsNotes.en || "Note originali non presenti.";
+        updateNotesSourceBadge(null);
+      }
+    }
+
+    async function triggerNotesAiTranslation() {
+      if (!currentDiscogsNotes.en) {
+        alert("Nessun testo originale presente da tradurre.");
+        return;
+      }
+      const baseUrl = apiUrlInput.value.trim().replace(/\/$/, "");
+      const geminiKey = geminiKeyInput ? geminiKeyInput.value.trim() : "";
+      const lang = document.getElementById("langSelect").value || "it";
+      const retranslateBtn = document.getElementById("retranslateBtn");
+      const origBtnText = retranslateBtn.innerHTML;
+      retranslateBtn.disabled = true;
+      retranslateBtn.innerHTML = `<span>⏳</span> Traduzione AI in corso...`;
+
+      try {
+        const resp = await fetch(`${baseUrl}/api/v1/translate`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(geminiKey ? { "X-Gemini-Key": geminiKey } : {})
+          },
+          body: JSON.stringify({
+            text: currentDiscogsNotes.en,
+            target_lang: lang,
+            gemini_key: geminiKey || null
+          })
+        });
+        if (!resp.ok) {
+          throw new Error(`Errore HTTP ${resp.status}`);
+        }
+        const data = await resp.json();
+        currentDiscogsNotes.it = data.translated_text;
+        currentDiscogsNotes.source = data.source;
+        switchNotesTab('it');
+      } catch (err) {
+        alert(`Errore traduzione AI: ${err.message}`);
+      } finally {
+        retranslateBtn.disabled = false;
+        retranslateBtn.innerHTML = origBtnText;
       }
     }
 
@@ -779,6 +881,7 @@
       const discogsNotesWrapper = document.getElementById("discogsNotesWrapper");
       currentDiscogsNotes.en = community.discogs_notes || null;
       currentDiscogsNotes.it = community.discogs_notes_translated || null;
+      currentDiscogsNotes.source = community.discogs_notes_translation_source || (currentDiscogsNotes.it ? "gemini_ai" : null);
 
       if (currentDiscogsNotes.en || currentDiscogsNotes.it) {
         discogsNotesWrapper.classList.remove("hidden");

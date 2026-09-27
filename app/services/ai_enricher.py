@@ -13,8 +13,78 @@ class AIEnricherService:
         self.api_key = settings.gemini_api_key
         self.model = settings.gemini_model or "gemini-2.5-flash"
 
-    def is_available(self) -> bool:
-        return bool(self.api_key and self.api_key.strip())
+    def is_available(self, override_key: Optional[str] = None) -> bool:
+        key = (override_key or self.api_key or "").strip()
+        return bool(key)
+
+    async def translate_with_gemini(
+        self,
+        text: str,
+        target_lang: str = "it",
+        api_key: Optional[str] = None
+    ) -> Optional[str]:
+        """
+        Traduce il testo delle note d'archivio Discogs usando Google Gemini AI,
+        con prompt specializzato per la terminologia musicale, discografica e di ingegneria audio.
+        """
+        active_key = (api_key or self.api_key or "").strip()
+        if not active_key:
+            return None
+
+        clean_text = (text or "").strip()
+        if not clean_text:
+            return None
+
+        prompt = f"""
+Sei un traduttore esperto e musicologo professionista specializzato in archivi discografici, crediti di copertina e storia della musica.
+Traduci fedelmente, elegantemente e fluidamente il seguente testo di note d'archivio Discogs nella lingua '{target_lang}'.
+
+Linee guida tassative:
+1. Mantieni intatti e non tradurre codici di catalogo, matrici/runout (es. 'Matrix / Runout', 'Side A', 'SHVL 804-A'), identificativi di lotto o codici a barre.
+2. Preserva i nomi propri di musicisti, tecnici del suono, studi di registrazione ed etichette discografiche (es. Abbey Road Studios, George Hardie, Harvest).
+3. Adatta con terminologia appropriata del settore i dettagli tecnici (es. 'lacquer cut' -> 'incisione della lacca', 'gatefold' -> 'copertina apribile', 'reissue' -> 'ristampa', 'mastered at' -> 'masterizzato presso').
+4. Non inventare informazioni non presenti nel testo originale.
+5. Rispondi ESCLUSIVAMENTE con la traduzione, senza commenti, saluti o virgolette.
+
+Testo originale da tradurre:
+{clean_text[:4000]}
+"""
+        url = GEMINI_API_URL.format(model=self.model)
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "contents": [
+                {
+                    "parts": [{"text": prompt}]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.2
+            }
+        }
+
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            try:
+                response = await client.post(
+                    f"{url}?key={active_key}",
+                    headers=headers,
+                    json=payload
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            translated_text = parts[0].get("text", "").strip()
+                            if translated_text:
+                                return translated_text
+                else:
+                    logger.warning("Gemini translation error: HTTP %s - %s", response.status_code, response.text)
+                    return None
+            except Exception as e:
+                logger.warning("Eccezione durante la traduzione Gemini: %s", e)
+                return None
+        return None
 
     async def enrich_album_data(
         self,
@@ -27,13 +97,15 @@ class AIEnricherService:
         discogs_bio: str,
         wikipedia_reception: str,
         discogs_notes: str,
-        lang: str = "it"
+        lang: str = "it",
+        api_key: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Sintetizza e arricchisce la biografia e le recensioni critiche dell'album usando Gemini AI.
         Restituisce un dizionario con 'biography', 'reviews_summary', 'critical_reception' o None in caso di errore.
         """
-        if not self.is_available():
+        active_key = (api_key or self.api_key or "").strip()
+        if not active_key:
             return None
 
         prompt = f"""
@@ -97,7 +169,7 @@ Rispondi ESCLUSIVAMENTE con il JSON valido, senza blocchi di codice markdown o t
         async with httpx.AsyncClient(timeout=25.0) as client:
             try:
                 response = await client.post(
-                    f"{url}?key={self.api_key}",
+                    f"{url}?key={active_key}",
                     headers=headers,
                     json=payload
                 )

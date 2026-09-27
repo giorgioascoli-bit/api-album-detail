@@ -1,6 +1,7 @@
 import os
 import logging
-from fastapi import FastAPI, Query, Path, HTTPException
+from typing import Optional
+from fastapi import FastAPI, Query, Path, HTTPException, Request, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, Response
 import httpx
@@ -9,6 +10,7 @@ from app.config import settings
 from app.models.album import AlbumDetailResponse
 from app.services.aggregator_service import aggregator_service
 from app.services.ai_enricher import ai_enricher
+from app.services.translator_service import translator_service
 
 logging.basicConfig(
     level=logging.INFO if not settings.debug else logging.DEBUG,
@@ -16,8 +18,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("album_detail_api")
 
-APP_VERSION = "1.2.0-dev"
-BUILD_ID = "2026.09.27.02"
+APP_VERSION = "1.3.0-dev"
+BUILD_ID = "2026.09.27.03"
 
 app = FastAPI(
     title="Music Album Detail API",
@@ -31,7 +33,7 @@ Caratteristiche:
 - **Copertina, packaging fisico e crediti dedicati** (fotografo, illustratore, designer).
 - **Quotazioni di mercato Discogs** (prezzo minimo, stima max e copie in vendita).
 - **Curiosità e aneddoti** storici sulla registrazione dell'album.
-- **Traduzione bilingue delle note d'archivio Discogs** (italiano e inglese).
+- **Traduzione con AI delle note d'archivio Discogs** (con Gemini AI e fallback neurale resiliente).
 - **Modulo AI Opzionale** (Google Gemini) per sintesi monografica ed enciclopedica.
     """,
     version=APP_VERSION,
@@ -112,22 +114,26 @@ async def get_album_details(
     discogs_id: int = Path(..., description="ID Discogs dell'album (Release ID o Master ID)", ge=1, examples=[249504]),
     id_type: str = Query("release", description="Tipo di ID Discogs specificato: 'release' oppure 'master'", pattern="^(release|master)$"),
     lang: str = Query("it", description="Lingua preferita per biografia e recensioni (es. 'it', 'en')"),
-    synthesize: bool = Query(True, description="Se True e AI configurata, arricchisce e sintetizza i testi")
+    synthesize: bool = Query(True, description="Se True e AI configurata, arricchisce e sintetizza i testi"),
+    gemini_key: Optional[str] = Query(None, description="Chiave API Google Gemini opzionale per arricchimento e traduzione AI"),
+    x_gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key", description="Chiave API Gemini passata via header HTTP")
 ):
     """
     Restituisce:
     - **primary_artist**: Informazioni e biografia del musicista o gruppo principale.
     - **musicians**: Musicisti partecipanti, ruoli e strumenti (es. Chitarra, Basso, Batteria, Sintetizzatore).
     - **main_editions**: Principali edizioni pubblicate (vinili, CD, rimasterizzazioni, box set).
-    - **reviews_and_comments**: Sintesi critica, estratti di recensioni e punteggio community.
+    - **reviews_and_comments**: Sintesi critica, estratti di recensioni, punteggio community e note tradotte con AI.
     - **tracklist**: Elenco brani e durata.
     """
     try:
+        active_gemini_key = (gemini_key or x_gemini_key or "").strip() or None
         data = await aggregator_service.get_album_details(
             discogs_id=discogs_id,
             id_type=id_type,
             lang=lang,
-            synthesize=synthesize
+            synthesize=synthesize,
+            gemini_api_key=active_gemini_key
         )
         return data
     except HTTPException as he:
@@ -135,6 +141,36 @@ async def get_album_details(
     except Exception as e:
         logger.exception("Errore inatteso nell'elaborazione dell'album %s: %s", discogs_id, e)
         raise HTTPException(status_code=500, detail=f"Errore interno durante il recupero dei dati: {str(e)}")
+
+@app.post("/api/v1/translate", tags=["Translation"])
+async def translate_text_endpoint(
+    text: str = Body(..., embed=True, description="Testo da tradurre (es. note storiche Discogs)"),
+    target_lang: str = Body("it", embed=True, description="Lingua target della traduzione"),
+    gemini_key: Optional[str] = Body(None, embed=True, description="Chiave API Gemini opzionale"),
+    x_gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key")
+):
+    """
+    Traduce un testo con Google Gemini AI (se chiave presente) o con motore neurale fallback resiliente.
+    """
+    clean_text = (text or "").strip()
+    if not clean_text:
+        raise HTTPException(status_code=400, detail="Il campo 'text' non può essere vuoto")
+    
+    active_key = (gemini_key or x_gemini_key or "").strip() or None
+    translated, source = await translator_service.translate_text(
+        text=clean_text,
+        target_lang=target_lang,
+        gemini_api_key=active_key
+    )
+    if not translated:
+        raise HTTPException(status_code=502, detail="Impossibile completare la traduzione del testo")
+
+    return {
+        "original_text": clean_text,
+        "translated_text": translated,
+        "target_lang": target_lang,
+        "source": source
+    }
 
 if __name__ == "__main__":
     import uvicorn

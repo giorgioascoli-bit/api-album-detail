@@ -6,6 +6,7 @@ from app.main import app
 from app.services.discogs_service import discogs_service
 from app.services.wikipedia_service import wikipedia_service
 from app.services.ai_enricher import ai_enricher
+from app.services.translator_service import translator_service
 from app.utils.cache import cache
 
 client = TestClient(app)
@@ -31,7 +32,7 @@ def test_demo_endpoint():
     response = client.get("/demo")
     assert response.status_code == 200
     assert "Music Album Explorer" in response.text
-    assert "v1.2.0-dev" in response.text
+    assert "v1.3.0-dev" in response.text
 
 def test_health_endpoint():
     response = client.get("/api/v1/health")
@@ -236,6 +237,62 @@ async def test_ai_enricher_flow():
         assert data["reviews_and_comments"]["discogs_notes_translated"] == "Note storiche tradotte in italiano da Gemini."
         assert len(data["curiosities"]) == 2
         assert len(data["bibliography"]) == 2
+
+@pytest.mark.asyncio
+async def test_translator_service_gemini():
+    with patch.object(ai_enricher, "is_available", return_value=True), \
+         patch.object(ai_enricher, "translate_with_gemini", new=AsyncMock(return_value="Registrato agli Abbey Road Studios")):
+        translated, source = await translator_service.translate_text("Recorded at Abbey Road Studios", target_lang="it")
+        assert translated == "Registrato agli Abbey Road Studios"
+        assert source == "gemini_ai"
+
+@pytest.mark.asyncio
+async def test_translator_service_fallback():
+    with patch.object(ai_enricher, "is_available", return_value=False), \
+         patch.object(translator_service, "_translate_neural_mymemory", new=AsyncMock(return_value="Traduzione Neurale Fallback")):
+        translated, source = await translator_service.translate_text("Sample English notes", target_lang="it")
+        assert translated == "Traduzione Neurale Fallback"
+        assert source == "neural_mt"
+
+def test_translate_endpoint():
+    with patch.object(translator_service, "translate_text", new=AsyncMock(return_value=("Traduzione di prova", "gemini_ai"))):
+        response = client.post(
+            "/api/v1/translate",
+            json={"text": "Recorded in London", "target_lang": "it"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["translated_text"] == "Traduzione di prova"
+        assert data["source"] == "gemini_ai"
+        assert data["target_lang"] == "it"
+
+    # Test validazione testo vuoto
+    bad_resp = client.post("/api/v1/translate", json={"text": "   ", "target_lang": "it"})
+    assert bad_resp.status_code == 400
+
+@pytest.mark.asyncio
+async def test_album_endpoint_notes_fallback_translation():
+    mock_release = {
+        "id": 123456,
+        "title": "Abbey Road",
+        "artists": [{"id": 1, "name": "The Beatles"}],
+        "notes": "Original recording took place in EMI Studios London."
+    }
+    with patch.object(discogs_service, "get_release", new=AsyncMock(return_value=mock_release)), \
+         patch.object(discogs_service, "get_master_versions", new=AsyncMock(return_value=[])), \
+         patch.object(discogs_service, "get_artist", new=AsyncMock(return_value={})), \
+         patch.object(wikipedia_service, "get_artist_biography", new=AsyncMock(return_value=("Bio", "wiki"))), \
+         patch.object(wikipedia_service, "get_album_reception", new=AsyncMock(return_value=("Rec", []))), \
+         patch.object(ai_enricher, "is_available", return_value=False), \
+         patch.object(translator_service, "translate_text", new=AsyncMock(return_value=("La registrazione originale ebbe luogo negli EMI Studios di Londra.", "neural_mt"))):
+
+        response = client.get("/api/v1/album/123456?id_type=release&lang=it")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["reviews_and_comments"]["discogs_notes"] == "Original recording took place in EMI Studios London."
+        assert data["reviews_and_comments"]["discogs_notes_translated"] == "La registrazione originale ebbe luogo negli EMI Studios di Londra."
+        assert data["reviews_and_comments"]["discogs_notes_translation_source"] == "neural_mt"
+
 
 
 

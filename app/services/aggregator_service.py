@@ -17,7 +17,9 @@ from app.models.album import (
 from app.services.discogs_service import discogs_service
 from app.services.wikipedia_service import wikipedia_service
 from app.services.ai_enricher import ai_enricher
+from app.services.translator_service import translator_service
 from app.utils.cache import cache
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,8 @@ class AggregatorService:
         discogs_id: int,
         id_type: str = "release",
         lang: str = "it",
-        synthesize: bool = True
+        synthesize: bool = True,
+        gemini_api_key: Optional[str] = None
     ) -> AlbumDetailResponse:
         """
         Aggrega tutti i dettagli di un album musicale:
@@ -36,7 +39,8 @@ class AggregatorService:
         - Principali edizioni pubblicate
         - Recensioni e commenti sull'album
         """
-        cache_key = f"album:{id_type}:{discogs_id}:{lang}:{synthesize}"
+        key_suffix = f":{hashlib.md5(gemini_api_key.encode()).hexdigest()[:8]}" if gemini_api_key else ""
+        cache_key = f"album:{id_type}:{discogs_id}:{lang}:{synthesize}{key_suffix}"
         cached_result = cache.get(cache_key)
         if cached_result:
             logger.info("Cache hit per %s", cache_key)
@@ -98,7 +102,7 @@ class AggregatorService:
 
         genres = release_data.get("genres", [])
         styles = release_data.get("styles", [])
-        notes = release_data.get("notes", "")
+        notes = release_data.get("notes", "") or (master_data.get("notes", "") if master_data else "")
 
         # Copertina
         cover_image = None
@@ -161,8 +165,9 @@ class AggregatorService:
         curiosities: List[str] = []
         bibliography: List[str] = []
         discogs_notes_translated: Optional[str] = None
+        translation_source: Optional[str] = None
 
-        if synthesize and ai_enricher.is_available():
+        if synthesize and ai_enricher.is_available(override_key=gemini_api_key):
             enrichment = await ai_enricher.enrich_album_data(
                 artist_name=primary_artist_name,
                 album_title=album_title,
@@ -173,7 +178,8 @@ class AggregatorService:
                 discogs_bio=discogs_artist_bio,
                 wikipedia_reception=wiki_reception,
                 discogs_notes=notes,
-                lang=lang
+                lang=lang,
+                api_key=gemini_api_key
             )
             if enrichment:
                 final_bio = enrichment.get("biography", final_bio)
@@ -182,6 +188,8 @@ class AggregatorService:
                 curiosities = enrichment.get("curiosities", [])
                 bibliography = enrichment.get("bibliography", [])
                 discogs_notes_translated = enrichment.get("discogs_notes_translated")
+                if discogs_notes_translated:
+                    translation_source = "gemini_ai"
 
                 # Integra luogo e date storiche di registrazione se individuate dall'AI
                 if enrichment.get("recording_location") and not production_details.recording_location:
@@ -198,6 +206,17 @@ class AggregatorService:
                     cover_art_details.designer = enrichment.get("cover_art_designer")
 
                 ai_enriched = True
+
+        # Traduzione specializzata delle note Discogs con AI / fallback neurale se presenti e non ancora tradotte
+        if notes and notes.strip() and not discogs_notes_translated:
+            translated_notes, source = await translator_service.translate_text(
+                text=notes,
+                target_lang=lang,
+                gemini_api_key=gemini_api_key
+            )
+            if translated_notes:
+                discogs_notes_translated = translated_notes
+                translation_source = source
 
         # Fallback bibliografia se vuota
         if not bibliography and primary_artist_name != "Artista Sconosciuto":
@@ -237,7 +256,8 @@ class AggregatorService:
                 community_score=round(community_score, 2) if community_score else None,
                 community_votes=community_votes,
                 discogs_notes=notes if notes else None,
-                discogs_notes_translated=discogs_notes_translated
+                discogs_notes_translated=discogs_notes_translated,
+                discogs_notes_translation_source=translation_source
             ),
             tracklist=tracklist,
             ai_enriched=ai_enriched

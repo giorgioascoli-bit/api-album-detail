@@ -54,7 +54,8 @@ class AlbumReviews(BaseModel):
     community_score: Optional[float] = Field(None, description="Valutazione media della community Discogs (su 5)")
     community_votes: Optional[int] = Field(None, description="Numero di voti registrati su Discogs")
     discogs_notes: Optional[str] = Field(None, description="Note storiche/critiche originali presenti nella scheda Discogs (in inglese)")
-    discogs_notes_translated: Optional[str] = Field(None, description="Traduzione in italiano delle note storiche di Discogs")
+    discogs_notes_translated: Optional[str] = Field(None, description="Traduzione in italiano delle note storiche di Discogs generata con AI")
+    discogs_notes_translation_source: Optional[str] = Field(None, description="Fonte della traduzione delle note ('gemini_ai' o 'neural_mt')")
 
 class TrackItem(BaseModel):
     position: str = Field(..., description="Numero o posizione della traccia (es. A1, 1)")
