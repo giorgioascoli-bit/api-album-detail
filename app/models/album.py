@@ -47,6 +47,8 @@ class PrimaryArtistInfo(BaseModel):
     biography: str = Field(..., description="Biografia approfondita ed enciclopedica dell'artista/band")
     source: str = Field("discogs+wikipedia", description="Fonte principale della biografia")
     bibliography: List[str] = Field(default_factory=list, description="Bibliografia, saggi, monografie e letture consigliate sull'artista")
+    wikipedia_url: Optional[str] = Field(None, description="Link diretto alla pagina Wikipedia ufficiale dell'artista")
+    wikipedia_title: Optional[str] = Field(None, description="Titolo esatto della voce enciclopedica su Wikipedia")
 
 class AlbumReviews(BaseModel):
     summary: str = Field(..., description="Sintesi delle recensioni e dell'accoglienza critica dell'album")

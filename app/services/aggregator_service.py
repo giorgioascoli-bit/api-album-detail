@@ -148,7 +148,12 @@ class AggregatorService:
         tracklist = discogs_service.extract_tracks(release_data)
 
         # 7. Ricerca su Wikipedia (Biografia e Recensioni)
-        wiki_bio, bio_source = await wikipedia_service.get_artist_biography(primary_artist_name, lang=lang)
+        wiki_res = await wikipedia_service.get_artist_biography(primary_artist_name, lang=lang)
+        wiki_bio, bio_source, wiki_url, wiki_title = "", "none", None, None
+        if len(wiki_res) >= 4:
+            wiki_bio, bio_source, wiki_url, wiki_title = wiki_res[0], wiki_res[1], wiki_res[2], wiki_res[3]
+        elif len(wiki_res) >= 2:
+            wiki_bio, bio_source = wiki_res[0], wiki_res[1]
         wiki_reception, wiki_extracts = await wikipedia_service.get_album_reception(album_title, primary_artist_name, lang=lang)
 
         # Rating community Discogs
@@ -241,7 +246,9 @@ class AggregatorService:
                 discogs_id=primary_artist_id,
                 biography=final_bio,
                 source="gemini_ai" if ai_enriched else bio_source,
-                bibliography=bibliography
+                bibliography=bibliography,
+                wikipedia_url=wiki_url,
+                wikipedia_title=wiki_title
             ),
             musicians=musicians,
             production_details=production_details,

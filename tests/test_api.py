@@ -32,7 +32,7 @@ def test_demo_endpoint():
     response = client.get("/demo")
     assert response.status_code == 200
     assert "Music Album Explorer" in response.text
-    assert "v1.3.0-dev" in response.text
+    assert "v1.3.1-dev" in response.text
 
 def test_health_endpoint():
     response = client.get("/api/v1/health")
@@ -287,11 +287,61 @@ async def test_album_endpoint_notes_fallback_translation():
          patch.object(translator_service, "translate_text", new=AsyncMock(return_value=("La registrazione originale ebbe luogo negli EMI Studios di Londra.", "neural_mt"))):
 
         response = client.get("/api/v1/album/123456?id_type=release&lang=it")
-        assert response.status_code == 200
-        data = response.json()
         assert data["reviews_and_comments"]["discogs_notes"] == "Original recording took place in EMI Studios London."
         assert data["reviews_and_comments"]["discogs_notes_translated"] == "La registrazione originale ebbe luogo negli EMI Studios di Londra."
         assert data["reviews_and_comments"]["discogs_notes_translation_source"] == "neural_mt"
+
+def test_wikipedia_service_clean_extract():
+    sample_raw = """
+I Pink Floyd sono una rock band britannica.
+== Storia ==
+La band si è formata a Londra nel 1965.
+=== Gli esordi ===
+Primi concerti al club UFO.
+== Discografia ==
+1967 - The Piper at the Gates of Dawn
+== Note ==
+1. Riferimento storico.
+== Bibliografia ==
+Libro di storia del rock.
+"""
+    cleaned = wikipedia_service._clean_biography_extract(sample_raw)
+    assert "I Pink Floyd sono una rock band britannica." in cleaned
+    assert "## Storia" in cleaned
+    assert "### Gli esordi" in cleaned
+    assert "The Piper at the Gates of Dawn" not in cleaned
+    assert "Riferimento storico" not in cleaned
+    assert "Bibliografia" not in cleaned
+
+@pytest.mark.asyncio
+async def test_album_endpoint_includes_wikipedia_url():
+    mock_release = {
+        "id": 999111,
+        "title": "Kind of Blue",
+        "artists": [{"id": 23755, "name": "Miles Davis"}]
+    }
+    wiki_tuple = (
+        "Miles Davis è stato un trombettista e compositore statunitense.\n\n## Storia\nIniziò con il bebop.",
+        "wikipedia_it",
+        "https://it.wikipedia.org/wiki/Miles_Davis",
+        "Miles Davis"
+    )
+    with patch.object(discogs_service, "get_release", new=AsyncMock(return_value=mock_release)), \
+         patch.object(discogs_service, "get_master_versions", new=AsyncMock(return_value=[])), \
+         patch.object(discogs_service, "get_artist", new=AsyncMock(return_value={})), \
+         patch.object(wikipedia_service, "get_artist_biography", new=AsyncMock(return_value=wiki_tuple)), \
+         patch.object(wikipedia_service, "get_album_reception", new=AsyncMock(return_value=("Capolavoro modale.", []))), \
+         patch.object(ai_enricher, "is_available", return_value=False):
+
+        response = client.get("/api/v1/album/999111?id_type=release&lang=it")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["primary_artist"]["name"] == "Miles Davis"
+        assert "Miles Davis" in data["primary_artist"]["biography"]
+        assert "## Storia" in data["primary_artist"]["biography"]
+        assert data["primary_artist"]["wikipedia_url"] == "https://it.wikipedia.org/wiki/Miles_Davis"
+        assert data["primary_artist"]["wikipedia_title"] == "Miles Davis"
+
 
 
 
