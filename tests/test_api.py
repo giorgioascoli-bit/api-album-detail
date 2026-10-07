@@ -287,6 +287,8 @@ async def test_album_endpoint_notes_fallback_translation():
          patch.object(translator_service, "translate_text", new=AsyncMock(return_value=("La registrazione originale ebbe luogo negli EMI Studios di Londra.", "neural_mt"))):
 
         response = client.get("/api/v1/album/123456?id_type=release&lang=it")
+        assert response.status_code == 200
+        data = response.json()
         assert data["reviews_and_comments"]["discogs_notes"] == "Original recording took place in EMI Studios London."
         assert data["reviews_and_comments"]["discogs_notes_translated"] == "La registrazione originale ebbe luogo negli EMI Studios di Londra."
         assert data["reviews_and_comments"]["discogs_notes_translation_source"] == "neural_mt"
