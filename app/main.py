@@ -19,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger("album_detail_api")
 
 APP_VERSION = "1.3.1-dev"
-BUILD_ID = "2026.10.07.01"
+BUILD_ID = "2026.10.07.02"
 
 app = FastAPI(
     title="Music Album Detail API",
